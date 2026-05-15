@@ -405,6 +405,65 @@ export async function insertScriptBlockSnapshot({
   };
 }
 
+export async function commitAndInsertScriptBlockSnapshot({
+  projectId,
+  scriptId,
+  type,
+  afterBlockId,
+  text,
+}: {
+  projectId: string;
+  scriptId: string;
+  type: ScriptBlockType;
+  afterBlockId: string;
+  text: string;
+}): Promise<ScriptMutationSnapshot> {
+  const blockId = `block-${randomUUID()}`;
+
+  await prisma.$transaction(async (tx) => {
+    const source = await tx.scriptBlock.findUniqueOrThrow({
+      where: { id: afterBlockId },
+      select: { scriptId: true },
+    });
+
+    if (source.scriptId !== scriptId) {
+      throw new Error(`Block ${afterBlockId} does not belong to script ${scriptId}.`);
+    }
+
+    await tx.scriptBlock.update({
+      where: { id: afterBlockId },
+      data: { text },
+    });
+
+    const blocks = await tx.scriptBlock.findMany({
+      where: { scriptId },
+      orderBy: { position: "asc" },
+      select: { id: true },
+    });
+    const afterIndex = blocks.findIndex((block) => block.id === afterBlockId);
+    const insertIndex = afterIndex >= 0 ? afterIndex + 1 : blocks.length;
+
+    await tx.scriptBlock.create({
+      data: {
+        id: blockId,
+        scriptId,
+        type,
+        text: "",
+        position: blocks.length + 1,
+      },
+    });
+
+    const orderedIds = blocks.map((block) => block.id);
+    orderedIds.splice(insertIndex, 0, blockId);
+    await resequenceScriptBlocks(tx, orderedIds);
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    activeBlockId: blockId,
+  };
+}
+
 export async function updateScriptBlockSnapshot({
   projectId,
   blockId,

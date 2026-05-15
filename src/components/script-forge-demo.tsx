@@ -47,6 +47,7 @@ import {
 } from "@/app/actions/projects";
 import { createInviteAction } from "@/app/actions/collaboration";
 import {
+  commitAndInsertScriptBlockAction,
   deleteScriptBlockAction,
   duplicateScriptBlockAction,
   insertScriptBlockAction,
@@ -732,7 +733,21 @@ export function ScriptForgeDemo({
     if (event.key !== "Enter" || event.shiftKey) return;
 
     event.preventDefault();
-    handleInsertScriptBlock(nextToolByBlockType[block.type], block.id);
+    const nextTool = nextToolByBlockType[block.type];
+    const nextType = toolToBlockType[nextTool];
+
+    setActiveTool(nextTool);
+    void runScriptMutation(
+      () =>
+        commitAndInsertScriptBlockAction({
+          projectId: activeProject.id,
+          scriptId: script.id,
+          type: nextType,
+          afterBlockId: block.id,
+          text: block.text,
+        }),
+      { focusReturnedBlock: true },
+    );
   };
 
   const focusBlockById = (blockId: string) => {

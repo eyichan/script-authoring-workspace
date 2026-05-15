@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  commitAndInsertScriptBlockSnapshot,
   deleteScriptBlockSnapshot,
   duplicateScriptBlockSnapshot,
   insertScriptBlockSnapshot,
@@ -17,6 +18,18 @@ export async function insertScriptBlockAction(input: {
   afterBlockId?: string;
 }) {
   const snapshot = await insertScriptBlockSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function commitAndInsertScriptBlockAction(input: {
+  projectId: string;
+  scriptId: string;
+  type: ScriptBlockType;
+  afterBlockId: string;
+  text: string;
+}) {
+  const snapshot = await commitAndInsertScriptBlockSnapshot(input);
   revalidatePath("/");
   return snapshot;
 }

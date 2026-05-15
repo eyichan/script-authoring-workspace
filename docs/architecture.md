@@ -233,6 +233,17 @@ Floating toolbar click / context menu action / input blur
   -> client refreshes local render state and focuses the returned block
 ```
 
+Implemented Enter-to-next-block flow:
+
+```text
+Canvas input Enter
+  -> commit current block text and insert next typed block in one server action
+  -> Prisma transaction updates current ScriptBlock and creates next ScriptBlock
+  -> resequence persisted blocks
+  -> return WorkspaceSnapshot plus inserted activeBlockId
+  -> client focuses the inserted block without dropping unblurred text
+```
+
 Implemented persisted workbench flow:
 
 ```text
@@ -272,6 +283,7 @@ Functional:
 - current deterministic tests live in `src/lib/domain/*.test.ts` and cover scene heading parsing, block insertion, text editing, duplicate/delete, empty scene rows, derived scene/character/location sync, and project lifecycle trash/restore behavior.
 - current E2E tests live in `tests/e2e/*.spec.ts` and run against a production `next start` server on port `3100`.
 - export formatter tests cover ordered Fountain text, Final Draft XML escaping, and generated package metadata.
+- E2E tests assert pressing Enter commits the current unblurred script line before inserting the next block.
 
 Persistence:
 

@@ -47,6 +47,8 @@ M2. Persistence foundation
 - Added Playwright E2E coverage for project lifecycle, script block persistence, and Workbench persistence.
 - Added real script export downloads for FDX, Fountain, and printable HTML packages.
 - Added persisted Invite / Collaboration state with project share links and collaborator records.
+- Added a read-only `/share/<token>` route for persisted invite links.
+- Fixed Enter-to-next-block editing so the current unblurred script line is committed before the next block is inserted.
 
 ## In Progress
 
@@ -160,6 +162,14 @@ M2. Persistence foundation
   - `npx prisma migrate status`: succeeded after injecting `DATABASE_URL` from `.env.local`; database schema is up to date with 2 migrations.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 4 Playwright tests passed, including Invite creating `INT. SHARE ROOM - DAY`, opening the generated `/share/<token>` route, and verifying the read-only page renders the shared scene and `Reviewer 2`.
+- After fixing Enter-to-next-block persistence:
+  - `commitAndInsertScriptBlockAction` commits the current block text and inserts the next block through one server action.
+  - `commitAndInsertScriptBlockSnapshot` performs the update, create, and resequence in one Prisma transaction.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npx prisma migrate status`: succeeded after injecting `DATABASE_URL` from `.env.local`; database schema is up to date with 2 migrations.
+  - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including pressing Enter from an unblurred Scene input and verifying Postgres persisted `INT. ENTER BRIDGE - DAY` before inserting the next Action block.
 
 ## Decisions
 

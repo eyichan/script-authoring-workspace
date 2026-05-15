@@ -94,6 +94,32 @@ test("persists project create, trash, and restore", async ({ page }) => {
   expect(restored.trashedAt).toBeNull();
 });
 
+test("commits the current script line before Enter inserts the next block", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  await page.getByRole("button", { name: "Scene", exact: true }).click({ force: true });
+  const sceneInput = page.getByRole("textbox", { name: /scene location block 1/i });
+  await sceneInput.fill("enter bridge");
+  await sceneInput.press("Enter");
+
+  await expect(page.getByRole("textbox", { name: /action block 2/i })).toBeFocused();
+  await expect
+    .poll(async () => {
+      const project = await latestActiveProject();
+      return project.scripts[0]?.blocks.map((block) => ({
+        position: block.position,
+        text: block.text,
+        type: block.type,
+      }));
+    })
+    .toEqual([
+      { position: 1, text: "INT. ENTER BRIDGE - DAY", type: "scene" },
+      { position: 2, text: "", type: "action" },
+    ]);
+});
+
 test("persists script blocks and workbench records across refresh", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Home").click();
