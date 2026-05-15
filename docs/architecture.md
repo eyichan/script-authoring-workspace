@@ -88,6 +88,16 @@ src/components/workspace/workbench-pages.tsx
 src/components/workspace/dialogs/
 ```
 
+Current UI behavior:
+
+- The Script page renders ordered `ScriptBlock` records instead of static screenplay lines.
+- The floating script toolbar chooses the next inserted block type.
+- The inline script input inserts a block with either typed text or a tool-specific default.
+- Adding a scene block creates a derived scene and makes it the active sidebar scene.
+- Adding a character block creates or reuses the derived character.
+- Adding dialogue after a character increases the derived character and scene dialogue counts.
+- Workbench pages receive derived cards instead of static mock cards.
+
 ### State
 
 M1 uses local React state for fast functional validation.
@@ -124,6 +134,16 @@ User action
   -> create/update/delete ScriptBlock
   -> recalculate derived workspace view
   -> render Sidebar / Script / Scenes / Characters / Locations
+```
+
+Implemented local flow:
+
+```text
+Floating toolbar selection
+  -> inline script input
+  -> append ScriptBlock in React state
+  -> deriveScriptEntities(scriptId, blocks)
+  -> update Script / Sidebar / Statistics / Workbench pages
 ```
 
 For persistence:

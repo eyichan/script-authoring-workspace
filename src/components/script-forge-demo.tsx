@@ -48,6 +48,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { deriveScriptEntities } from "@/lib/domain/screenplay";
+import { seedWorkspace } from "@/lib/domain/seed";
+import type { DerivedScene, ScriptBlock, ScriptBlockType } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
 type ExportFormat = "fdx" | "fountain" | "pdf";
@@ -76,12 +79,6 @@ const navItems = [
   { label: "Assets", icon: ImageIcon },
 ] satisfies Array<{ label: PageName; icon: ComponentType<{ className?: string }> }>;
 
-const scenes = [
-  { id: 1, title: "INT. MOTEL ROOM", time: "NIGHT" },
-  { id: 2, title: "EXT. HIGHWAY DINER", time: "DAWN" },
-  { id: 3, title: "INT. INTERROGATION ROOM", time: "DAY" },
-];
-
 const tools = [
   { label: "Scene", icon: Film },
   { label: "Action", icon: Zap },
@@ -94,33 +91,27 @@ const tools = [
 ] as const;
 type ToolLabel = (typeof tools)[number]["label"];
 
-const screenplay = [
-  { type: "transition", text: "FADE IN:" },
-  { type: "scene", text: "EXT. HIGHWAY DINER - DAWN" },
-  {
-    type: "action",
-    text:
-      "A roadside diner sits alone under a violet sky. Eighteen-wheelers idle in the gravel lot. The OPEN sign flickers like it has been losing the same argument all night.",
-  },
-  {
-    type: "action",
-    text:
-      "NORA VALE, 34, trench coat over a hospital gown, crosses the lot barefoot. In one hand: a motel key. In the other: a bloodied cassette tape.",
-  },
-  { type: "character", text: "NORA" },
-  { type: "paren", text: "(to herself)" },
-  { type: "dialogue", text: "If he remembers the song, he remembers the room." },
-  {
-    type: "action",
-    text:
-      "Inside the diner, DEPUTY MARSH, 52, watches her through the rain-streaked glass. He lowers his coffee without taking a sip.",
-  },
-  { type: "character", text: "MARSH" },
-  { type: "dialogue", text: "That is not the woman from the bulletin." },
-  { type: "character", text: "WAITRESS" },
-  { type: "dialogue", text: "Then why are you shaking?" },
-  { type: "transition", text: "CUT TO:" },
-];
+const toolToBlockType: Record<ToolLabel, ScriptBlockType> = {
+  Scene: "scene",
+  Action: "action",
+  Character: "character",
+  Paren: "paren",
+  Dialogue: "dialogue",
+  Transition: "transition",
+  Comment: "comment",
+  Subtitle: "subtitle",
+};
+
+const nextToolByBlockType: Record<ScriptBlockType, ToolLabel> = {
+  scene: "Action",
+  action: "Action",
+  character: "Dialogue",
+  paren: "Dialogue",
+  dialogue: "Character",
+  transition: "Scene",
+  comment: "Action",
+  subtitle: "Action",
+};
 
 const exportLabels: Record<ExportFormat, string> = {
   fdx: "Final Draft",
@@ -141,7 +132,6 @@ const workbenchConfig = {
     emptyTitle: "Casting Sheet",
     emptyCopy:
       "Characters come from the script. Add them here in advance, or write a character name in the script and the entity will be created automatically.",
-    cards: ["Nora Vale", "Deputy Marsh", "Waitress"],
   },
   Props: {
     title: "Props",
@@ -154,7 +144,6 @@ const workbenchConfig = {
     emptyTitle: "Prop Book",
     emptyCopy:
       "Props turn action lines into production memory: cassette tape, motel key, coffee cup, and evidence bag.",
-    cards: ["Bloodied cassette tape", "Motel key", "Coffee cup", "Evidence bag"],
   },
   Locations: {
     title: "Locations",
@@ -168,7 +157,6 @@ const workbenchConfig = {
     emptyTitle: "Scout Book",
     emptyCopy:
       "Locations come from scene headings and help scout, lighting, and production teams align before principal photography.",
-    cards: ["Highway Diner", "Motel Room", "Interrogation Room"],
   },
   Scenes: {
     title: "Scene Board",
@@ -181,7 +169,6 @@ const workbenchConfig = {
     emptyTitle: "Scene Board",
     emptyCopy:
       "Scenes become production units for still generation, shot planning, and video prompts.",
-    cards: ["EXT. HIGHWAY DINER - DAWN", "INT. MOTEL ROOM - NIGHT", "INT. INTERROGATION ROOM - DAY"],
   },
   Assets: {
     title: "Assets",
@@ -195,7 +182,6 @@ const workbenchConfig = {
     emptyTitle: "Asset Library",
     emptyCopy:
       "Generated stills, videos, reference images, and production exports live here with links back to scenes.",
-    cards: ["Diner exterior still", "Nora reference", "Marsh reference", "Cassette prop", "Scene board export"],
   },
 } satisfies Record<
   WorkbenchPageName,
@@ -206,7 +192,6 @@ const workbenchConfig = {
     action: string;
     emptyTitle: string;
     emptyCopy: string;
-    cards: string[];
   }
 >;
 
@@ -230,11 +215,43 @@ function isWorkbenchPage(page: PageName): page is WorkbenchPageName {
   return page !== "Script" && page !== "Beats" && page !== "Storyboard";
 }
 
+function getDefaultBlockText(tool: ToolLabel): string {
+  switch (tool) {
+    case "Scene":
+      return "EXT. ORBITAL DOCK - DAWN";
+    case "Action":
+      return "A maintenance alarm pulses across the empty corridor.";
+    case "Character":
+      return "DR. VALE";
+    case "Paren":
+      return "(quietly)";
+    case "Dialogue":
+      return "If the signal is real, we are already late.";
+    case "Transition":
+      return "CUT TO:";
+    case "Comment":
+      return "Need a stronger visual hook here.";
+    case "Subtitle":
+      return "Radio chatter overlaps in Mandarin.";
+  }
+}
+
 export function ScriptForgeDemo() {
   const [activePage, setActivePage] = useState<PageName>("Script");
-  const [activeScene, setActiveScene] = useState(2);
+  const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
+  const [beats] = useState(seedWorkspace.beats);
+  const [props] = useState(seedWorkspace.props);
+  const [assetTasks] = useState(seedWorkspace.assetTasks);
+  const derived = useMemo(
+    () => deriveScriptEntities(seedWorkspace.script.id, blocks),
+    [blocks],
+  );
+  const [activeScene, setActiveScene] = useState(
+    derived.scenes[0]?.id ?? "",
+  );
   const [editorTab, setEditorTab] = useState<EditorTab>("script");
   const [activeTool, setActiveTool] = useState<ToolLabel>("Action");
+  const [draftBlockText, setDraftBlockText] = useState("");
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("info");
   const [paginationMode, setPaginationMode] = useState<PaginationMode>("minimal");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("fdx");
@@ -249,26 +266,123 @@ export function ScriptForgeDemo() {
   const [workbenchMessage, setWorkbenchMessage] = useState(
     "Select a page action to create a local mock state.",
   );
-  const [generatedStills, setGeneratedStills] = useState<number[]>([]);
+  const [generatedStills, setGeneratedStills] = useState<string[]>([]);
   const editorMode = activePage === "Script" || activePage === "Beats";
+  const dynamicCards: Record<WorkbenchPageName, string[]> = {
+    Characters: derived.characters.map((character) => character.displayName),
+    Props: props.map((prop) => prop.name),
+    Locations: derived.locations.map((location) => location.displayName),
+    Scenes: derived.scenes.map((scene) => scene.heading),
+    Assets: assetTasks.map((task) => task.title),
+  };
   const workbenchCount =
     isWorkbenchPage(activePage)
-      ? workbenchConfig[activePage].count + mockAdditions[activePage]
+      ? dynamicCards[activePage].length + mockAdditions[activePage]
       : 0;
   const sidebarSectionTitle = activePage === "Script" ? "Scenes" : activePage;
+  const sidebarItems = useMemo(() => {
+    if (activePage === "Beats") {
+      return beats.length
+        ? beats.map((beat, index) => ({
+            id: beat.id,
+            title: beat.title,
+            time: `${beat.durationMinutes}M`,
+            index: index + 1,
+          }))
+        : [{ id: "empty-beats", title: "No beats yet", time: "PLAN", index: 1 }];
+    }
+
+    if (activePage === "Characters") {
+      return derived.characters.map((character, index) => ({
+        id: character.id,
+        title: character.displayName,
+        time: `${character.dialogueLineCount} LINES`,
+        index: index + 1,
+      }));
+    }
+
+    if (activePage === "Props") {
+      return props.map((prop, index) => ({
+        id: prop.id,
+        title: prop.name.toUpperCase(),
+        time: prop.category.toUpperCase(),
+        index: index + 1,
+      }));
+    }
+
+    if (activePage === "Locations") {
+      return derived.locations.map((location, index) => ({
+        id: location.id,
+        title: location.displayName,
+        time: `${location.sceneIds.length} SCENES`,
+        index: index + 1,
+      }));
+    }
+
+    if (activePage === "Assets") {
+      return assetTasks.length
+        ? assetTasks.map((task, index) => ({
+            id: task.id,
+            title: task.title,
+            time: task.status.toUpperCase(),
+            index: index + 1,
+          }))
+        : [{ id: "empty-assets", title: "No assets yet", time: "TASKS", index: 1 }];
+    }
+
+    return derived.scenes.map((scene, index) => ({
+      id: scene.id,
+      title: `${scene.prefix} ${scene.locationName}`,
+      time: scene.timeOfDay,
+      index: index + 1,
+    }));
+  }, [activePage, assetTasks, beats, derived.characters, derived.locations, derived.scenes, props]);
 
   const stats = useMemo(
     () => [
-      { label: "Scenes", value: 3 },
-      { label: "Characters", value: 5 },
-      { label: "Locations", value: 4 },
-      { label: "Beats", value: 9 },
+      { label: "Scenes", value: derived.scenes.length },
+      { label: "Characters", value: derived.characters.length },
+      { label: "Locations", value: derived.locations.length },
+      { label: "Beats", value: beats.length },
       { label: "Shots", value: shotListReady ? 24 : 0 },
-      { label: "Props", value: breakdownReady ? 11 : 0 },
+      { label: "Props", value: props.length + (breakdownReady ? 7 : 0) },
       { label: "Exports", value: exportLabels[exportFormat] },
     ],
-    [breakdownReady, exportFormat, shotListReady],
+    [
+      beats.length,
+      breakdownReady,
+      derived.characters.length,
+      derived.locations.length,
+      derived.scenes.length,
+      exportFormat,
+      props.length,
+      shotListReady,
+    ],
   );
+
+  const handleAddScriptBlock = () => {
+    const type = toolToBlockType[activeTool];
+    const now = new Date().toISOString();
+    const id = `block-${Date.now()}`;
+    const text = draftBlockText.trim() || getDefaultBlockText(activeTool);
+    const nextBlock: ScriptBlock = {
+      id,
+      scriptId: seedWorkspace.script.id,
+      type,
+      text,
+      position:
+        blocks.reduce((highest, block) => Math.max(highest, block.position), 0) + 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setBlocks((current) => [...current, nextBlock]);
+    if (type === "scene") {
+      setActiveScene(`scene-${id}`);
+    }
+    setActiveTool(nextToolByBlockType[type]);
+    setDraftBlockText("");
+  };
 
   const handleWorkbenchAction = () => {
     if (!isWorkbenchPage(activePage)) return;
@@ -348,18 +462,7 @@ export function ScriptForgeDemo() {
           <section className="mt-5 pl-4 max-[1180px]:hidden">
             <h2 className="mb-4 text-[16px] font-normal">{sidebarSectionTitle}</h2>
             <div className="flex flex-col gap-2">
-              {(activePage === "Beats"
-                ? [{ id: 1, title: "No beats yet", time: "PLAN" }]
-                : activePage === "Characters"
-                  ? [{ id: 1, title: "NORA VALE", time: "LEAD" }, { id: 2, title: "DEPUTY MARSH", time: "SUPPORT" }]
-                  : activePage === "Props"
-                    ? [{ id: 1, title: "CASSETTE TAPE", time: "HERO" }, { id: 2, title: "MOTEL KEY", time: "PROP" }]
-                    : activePage === "Locations"
-                      ? [{ id: 1, title: "HIGHWAY DINER", time: "DAWN" }, { id: 2, title: "MOTEL ROOM", time: "NIGHT" }]
-                      : activePage === "Assets"
-                        ? [{ id: 1, title: "DINER STILL", time: "IMG" }, { id: 2, title: "NORA REF", time: "IMG" }]
-                        : scenes
-              ).map((scene) => (
+              {sidebarItems.map((scene) => (
                 <button
                   key={scene.id}
                   onClick={() => setActiveScene(scene.id)}
@@ -370,7 +473,7 @@ export function ScriptForgeDemo() {
                   )}
                 >
                   <span className="truncate">
-                    {scene.id}. {scene.title}
+                    {scene.index}. {scene.title}
                   </span>
                   <span className="shrink-0 pl-2 text-[#777771]">
                     - {scene.time}
@@ -490,6 +593,8 @@ export function ScriptForgeDemo() {
                       : [...current, sceneId],
                   )
                 }
+                cards={dynamicCards[activePage]}
+                scenes={derived.scenes}
               />
             ) : editorTab === "cover" ? (
               <CoverPreview />
@@ -520,9 +625,42 @@ export function ScriptForgeDemo() {
 
               <article className="script-paper mx-auto mt-[-20px] min-h-[1210px] w-[min(816px,100%)] overflow-hidden">
                 <div className="mx-auto max-w-[576px] px-0 pb-36 pt-[104px] font-mono text-[16px] leading-[1.8] max-[900px]:max-w-[86%] max-[900px]:pt-20 max-[900px]:text-[13px]">
-                  {screenplay.map((block, index) => (
+                  <div className="mb-8 rounded-xl border border-[#e7e7e2] bg-[#fcfdfc]/90 p-3 font-sans shadow-[0_8px_24px_rgb(42_42_37/0.08)]">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="text-[12px] font-medium text-[#6f7772]">
+                        Add {activeTool}
+                      </span>
+                      <Badge variant="secondary">
+                        {derived.scenes.length} scenes · {derived.characters.length} characters
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={draftBlockText}
+                        onChange={(event) => setDraftBlockText(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            handleAddScriptBlock();
+                          }
+                        }}
+                        placeholder={getDefaultBlockText(activeTool)}
+                        className="min-w-0 flex-1 rounded-lg border border-[#dfe4e1] bg-white px-3 py-2 text-[13px] text-[#252522] outline-none transition-[border-color,box-shadow] focus:border-[#89a893] focus:shadow-[0_0_0_3px_rgb(46_98_72/0.12)]"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddScriptBlock}
+                        className="h-9 rounded-lg bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none hover:bg-[#28583f] active:translate-y-0"
+                      >
+                        <Plus data-icon="inline-start" />
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+
+                  {blocks.map((block) => (
                     <p
-                      key={`${block.type}-${index}`}
+                      key={block.id}
                       className={cn(
                         "mb-[15px] whitespace-pre-wrap",
                         block.type === "scene" && "mt-1 uppercase",
@@ -768,13 +906,17 @@ function WorkbenchPage({
   message,
   generatedStills,
   onGenerateStill,
+  cards,
+  scenes,
 }: {
   page: WorkbenchPageName;
   activeTab: string;
   additions: number;
   message: string;
-  generatedStills: number[];
-  onGenerateStill: (sceneId: number) => void;
+  generatedStills: string[];
+  onGenerateStill: (sceneId: string) => void;
+  cards: string[];
+  scenes: DerivedScene[];
 }) {
   const config = workbenchConfig[page];
   const isScenes = page === "Scenes";
@@ -783,11 +925,11 @@ function WorkbenchPage({
       ? `Imported reference ${index + 1}`
       : `${config.action} draft ${index + 1}`,
   );
-  const cards = [...config.cards, ...extraCards];
+  const displayCards = [...cards, ...extraCards];
   const filteredCards =
     page !== "Assets" || activeTab === "All"
-      ? cards
-      : cards.filter((card) =>
+      ? displayCards
+      : displayCards.filter((card) =>
           activeTab === "Videos"
             ? card.toLowerCase().includes("video")
             : !card.toLowerCase().includes("video"),
@@ -810,9 +952,11 @@ function WorkbenchPage({
               >
                 <span className="text-[#8b8b84]">#{index + 1}</span>
                 <strong className="truncate font-medium">
-                  {scene.title} - {scene.time}
+                  {scene.heading}
                 </strong>
-                <span className="text-[#777771]">{index + 2} chars</span>
+                <span className="text-[#777771]">
+                  {scene.characterIds.length} chars
+                </span>
                 <Badge variant="secondary">
                   {generatedStills.includes(scene.id) ? "Still ready" : "1/8"}
                 </Badge>
@@ -830,7 +974,7 @@ function WorkbenchPage({
                   <div>
                     <div className="text-sm text-[#8b8b84]">#{index + 1}</div>
                     <h3 className="mt-1 text-lg font-medium">
-                      {scene.title} - {scene.time}
+                      {scene.locationName} - {scene.timeOfDay}
                     </h3>
                   </div>
                   <Badge variant="secondary">
@@ -839,14 +983,14 @@ function WorkbenchPage({
                 </div>
                 <div className="mb-5 flex gap-4 text-sm text-[#777771]">
                   <span className="inline-flex items-center gap-1">
-                    <User className="size-4" /> {index + 2} chars
+                    <User className="size-4" /> {scene.characterIds.length} chars
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <MessageSquare className="size-4" /> {index * 3 + 4} lines
+                    <MessageSquare className="size-4" /> {scene.dialogueLineCount} lines
                   </span>
                 </div>
                 <p className="mb-5 text-sm leading-6 text-[#777771]">
-                  A production-ready scene unit derived from screenplay blocks.
+                  {scene.heading} · {scene.blockCount} linked script blocks.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -887,7 +1031,7 @@ function WorkbenchPage({
                   )}
                 </div>
                 <Badge variant="secondary">
-                  {index < config.cards.length ? "Extracted" : "Draft"}
+                  {index < cards.length ? "Extracted" : "Draft"}
                 </Badge>
               </div>
               <h3 className="text-[16px] font-medium leading-6">{card}</h3>
