@@ -116,7 +116,13 @@ Existing main file:
 src/components/script-forge-demo.tsx
 ```
 
-This file should be split as functionality grows:
+Extracted workspace component:
+
+```text
+src/components/workspace/collaboration-panel.tsx
+```
+
+This file should continue to be split as functionality grows:
 
 ```text
 src/components/workspace/app-shell.tsx
@@ -150,6 +156,7 @@ Current UI behavior:
 - The inspector export action downloads a real script package from current persisted script blocks. FDX and Fountain are file exports; PDF currently downloads a printable HTML package that can be printed to PDF by the browser.
 - The top-level Invite action creates a persisted project share link and reviewer record, then opens the Collaboration inspector tab.
 - The Collaboration inspector tab renders persisted collaborators and the current share link instead of local mock reviewers.
+- The Collaboration panel is extracted from the main workspace component; the shell owns state and handlers, while the panel owns share/reviewer controls.
 
 ### State
 

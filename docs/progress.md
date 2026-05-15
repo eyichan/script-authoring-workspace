@@ -54,6 +54,7 @@ M5. Product verification and hardening
 - Added persisted title edit flows for Beat, Prop, and Asset workbench records.
 - Added persisted collaboration management for reviewer removal and share-link revocation.
 - Added E2E coverage for Character -> Dialogue -> Character screenplay authoring.
+- Extracted the Collaboration inspector panel into `src/components/workspace/collaboration-panel.tsx`.
 
 ## In Progress
 
@@ -211,6 +212,13 @@ M5. Product verification and hardening
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 6 Playwright tests passed.
   - Initial selector used `getByRole("textbox")` for the Character input, but the input has a `datalist` and is exposed as a combobox. The test now uses its accessible label instead.
+- After extracting the Collaboration panel:
+  - `src/components/workspace/collaboration-panel.tsx` now owns share link display, revoke control, collaborator display, and reviewer removal controls.
+  - `src/components/script-forge-demo.tsx` still owns workspace state and collaboration handlers.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed, including the collaboration management flow after extraction.
 
 ## Decisions
 
