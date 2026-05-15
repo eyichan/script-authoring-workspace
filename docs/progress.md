@@ -2,7 +2,7 @@
 
 ## Current Step
 
-M2. Persistence foundation
+M5. Product verification and hardening
 
 ## Completed
 
@@ -51,6 +51,7 @@ M2. Persistence foundation
 - Fixed Enter-to-next-block editing so the current unblurred script line is committed before the next block is inserted.
 - Added persisted delete flows for Beat, Prop, and Asset workbench records.
 - Added persisted project rename that keeps the first script title in sync.
+- Added persisted title edit flows for Beat, Prop, and Asset workbench records.
 
 ## In Progress
 
@@ -59,9 +60,9 @@ M2. Persistence foundation
 ## Next
 
 1. Split the large workspace component once persistence behavior stabilizes.
-2. Add native binary PDF export if browser-printable HTML is not sufficient.
-3. Add delete/edit flows for Beats, Props, Assets, and collaborators if the product requires full CRUD rather than create-only records.
-4. Expand E2E for character/dialogue editing and native share routes if those flows become persisted product behavior.
+2. Add collaborator management beyond invite-only state if the product requires reviewer removal, role changes, or share revocation.
+3. Add native binary PDF export if browser-printable HTML is not sufficient.
+4. Expand E2E for character/dialogue editing, share permissions, and any component split that changes workflow wiring.
 
 ## Verification Log
 
@@ -186,6 +187,13 @@ M2. Persistence foundation
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including renaming a new project, verifying both `Project.title` and first `Script.title` in Postgres, and confirming the title survives refresh.
+- After adding persisted Workbench title editing:
+  - `updateBeatAction`, `updatePropAction`, and `updateAssetAction` update titles through server actions constrained to the current script.
+  - Beat rows, Prop cards, and Asset cards now expose inline title fields for persisted records.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including editing Beat, Prop, and Asset titles, verifying the Postgres values, then deleting the renamed records.
 
 ## Decisions
 

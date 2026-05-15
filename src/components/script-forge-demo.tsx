@@ -61,6 +61,9 @@ import {
   deleteBeatAction,
   deletePropAction,
   importAssetAction,
+  updateAssetAction,
+  updateBeatAction,
+  updatePropAction,
 } from "@/app/actions/workbench";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -943,6 +946,46 @@ export function ScriptForgeDemo({
     }
   };
 
+  const handleUpdateBeat = (beatId: string, title: string) => {
+    void runWorkbenchMutation(() =>
+      updateBeatAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+        beatId,
+        title,
+      }),
+    );
+  };
+
+  const handleUpdateWorkbenchCard = (
+    page: WorkbenchPageName,
+    id: string,
+    title: string,
+  ) => {
+    if (page === "Props") {
+      void runWorkbenchMutation(() =>
+        updatePropAction({
+          projectId: activeProject.id,
+          scriptId: script.id,
+          propId: id,
+          name: title,
+        }),
+      );
+      return;
+    }
+
+    if (page === "Assets") {
+      void runWorkbenchMutation(() =>
+        updateAssetAction({
+          projectId: activeProject.id,
+          scriptId: script.id,
+          assetId: id,
+          title,
+        }),
+      );
+    }
+  };
+
   const handleCreateProject = () => {
     void runProjectMutation(createProjectAction);
   };
@@ -1295,6 +1338,7 @@ export function ScriptForgeDemo({
                 message={workbenchMessage}
                 mutationPending={workbenchMutationPending}
                 onDeleteBeat={handleDeleteBeat}
+                onUpdateBeat={handleUpdateBeat}
               />
             ) : !editorMode ? (
               <WorkbenchPage
@@ -1315,6 +1359,13 @@ export function ScriptForgeDemo({
                 mutationPending={workbenchMutationPending}
                 onDeleteCard={(id) =>
                   handleDeleteWorkbenchCard(activePage as WorkbenchPageName, id)
+                }
+                onUpdateCard={(id, title) =>
+                  handleUpdateWorkbenchCard(
+                    activePage as WorkbenchPageName,
+                    id,
+                    title,
+                  )
                 }
               />
             ) : editorTab === "cover" ? (
@@ -1954,11 +2005,13 @@ function BeatsPage({
   message,
   mutationPending,
   onDeleteBeat,
+  onUpdateBeat,
 }: {
   beats: Beat[];
   message: string;
   mutationPending: boolean;
   onDeleteBeat: (beatId: string) => void;
+  onUpdateBeat: (beatId: string, title: string) => void;
 }) {
   return (
     <div className="relative min-h-[669px] px-6 py-6">
@@ -1971,9 +2024,36 @@ function BeatsPage({
             >
               <span className="text-[#8b8b84]">#{index + 1}</span>
               <div className="min-w-0">
-                <strong className="block truncate font-medium text-[#242421]">
-                  {beat.title}
-                </strong>
+                <label htmlFor={`beat-title-${beat.id}`} className="sr-only">
+                  Beat title {index + 1}
+                </label>
+                <input
+                  id={`beat-title-${beat.id}`}
+                  name={`beat-title-${beat.id}`}
+                  aria-label={`Beat title ${index + 1}`}
+                  defaultValue={beat.title}
+                  disabled={mutationPending}
+                  spellCheck={false}
+                  onBlur={(event) => {
+                    const nextTitle = event.target.value.trim();
+                    if (nextTitle && nextTitle !== beat.title) {
+                      onUpdateBeat(beat.id, nextTitle);
+                    } else {
+                      event.target.value = beat.title;
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                    if (event.key === "Escape") {
+                      event.currentTarget.value = beat.title;
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  className="block w-full truncate border-0 bg-transparent p-0 font-medium text-[#242421] outline-none focus:bg-[#f8faf9] disabled:opacity-60"
+                />
                 <span className="block truncate text-[#777771]">
                   {beat.description}
                 </span>
@@ -2023,6 +2103,7 @@ function WorkbenchPage({
   scenes,
   mutationPending,
   onDeleteCard,
+  onUpdateCard,
 }: {
   page: WorkbenchPageName;
   activeTab: string;
@@ -2034,6 +2115,7 @@ function WorkbenchPage({
   scenes: DerivedScene[];
   mutationPending: boolean;
   onDeleteCard: (id: string) => void;
+  onUpdateCard: (id: string, title: string) => void;
 }) {
   const config = workbenchConfig[page];
   const isScenes = page === "Scenes";
@@ -2171,7 +2253,42 @@ function WorkbenchPage({
                   ) : null}
                 </div>
               </div>
-              <h3 className="text-[16px] font-medium leading-6">{card.title}</h3>
+              {card.persisted && (page === "Props" || page === "Assets") ? (
+                <>
+                  <label htmlFor={`${page.toLowerCase()}-title-${card.id}`} className="sr-only">
+                    {page === "Props" ? "Prop" : "Asset"} title
+                  </label>
+                  <input
+                    id={`${page.toLowerCase()}-title-${card.id}`}
+                    name={`${page.toLowerCase()}-title-${card.id}`}
+                    aria-label={`${page === "Props" ? "Prop" : "Asset"} title ${card.title}`}
+                    defaultValue={card.title}
+                    disabled={mutationPending}
+                    spellCheck={false}
+                    onBlur={(event) => {
+                      const nextTitle = event.target.value.trim();
+                      if (nextTitle && nextTitle !== card.title) {
+                        onUpdateCard(card.id, nextTitle);
+                      } else {
+                        event.target.value = card.title;
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        event.currentTarget.blur();
+                      }
+                      if (event.key === "Escape") {
+                        event.currentTarget.value = card.title;
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    className="block w-full border-0 bg-transparent p-0 text-[16px] font-medium leading-6 text-[#242421] outline-none focus:bg-[#f8faf9] disabled:opacity-60"
+                  />
+                </>
+              ) : (
+                <h3 className="text-[16px] font-medium leading-6">{card.title}</h3>
+              )}
               <p className="mt-2 text-[13px] leading-5 text-[#777771]">
                 {page === "Assets"
                   ? "Linked to scene production and export history."

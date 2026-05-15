@@ -744,6 +744,96 @@ export async function deleteAssetSnapshot({
   };
 }
 
+export async function updateBeatSnapshot({
+  projectId,
+  scriptId,
+  beatId,
+  title,
+}: {
+  projectId: string;
+  scriptId: string;
+  beatId: string;
+  title: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextTitle = title.trim();
+
+  if (!nextTitle) {
+    throw new Error("Beat title cannot be empty.");
+  }
+
+  const updated = await prisma.beat.updateMany({
+    where: { id: beatId, scriptId },
+    data: { title: nextTitle },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: updated.count
+      ? `${nextTitle} saved in the persisted beat outline.`
+      : "Beat was already removed.",
+  };
+}
+
+export async function updatePropSnapshot({
+  projectId,
+  scriptId,
+  propId,
+  name,
+}: {
+  projectId: string;
+  scriptId: string;
+  propId: string;
+  name: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextName = name.trim();
+
+  if (!nextName) {
+    throw new Error("Prop name cannot be empty.");
+  }
+
+  const updated = await prisma.prop.updateMany({
+    where: { id: propId, scriptId },
+    data: { name: nextName },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: updated.count
+      ? `${nextName} saved in the persisted prop book.`
+      : "Prop was already removed.",
+  };
+}
+
+export async function updateAssetSnapshot({
+  projectId,
+  scriptId,
+  assetId,
+  title,
+}: {
+  projectId: string;
+  scriptId: string;
+  assetId: string;
+  title: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextTitle = title.trim();
+
+  if (!nextTitle) {
+    throw new Error("Asset title cannot be empty.");
+  }
+
+  const updated = await prisma.assetTask.updateMany({
+    where: { id: assetId, scriptId },
+    data: { title: nextTitle },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: updated.count
+      ? `${nextTitle} saved in the persisted asset library.`
+      : "Asset reference was already removed.",
+  };
+}
+
 export async function createInviteSnapshot({
   projectId,
 }: {

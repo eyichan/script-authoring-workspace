@@ -9,6 +9,9 @@ import {
   deleteBeatSnapshot,
   deletePropSnapshot,
   importAssetSnapshot,
+  updateAssetSnapshot,
+  updateBeatSnapshot,
+  updatePropSnapshot,
 } from "@/lib/db/workspace";
 
 export async function createBeatAction(input: {
@@ -64,6 +67,39 @@ export async function deleteAssetAction(input: {
   assetId: string;
 }) {
   const snapshot = await deleteAssetSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function updateBeatAction(input: {
+  projectId: string;
+  scriptId: string;
+  beatId: string;
+  title: string;
+}) {
+  const snapshot = await updateBeatSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function updatePropAction(input: {
+  projectId: string;
+  scriptId: string;
+  propId: string;
+  name: string;
+}) {
+  const snapshot = await updatePropSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function updateAssetAction(input: {
+  projectId: string;
+  scriptId: string;
+  assetId: string;
+  title: string;
+}) {
+  const snapshot = await updateAssetSnapshot(input);
   revalidatePath("/");
   return snapshot;
 }

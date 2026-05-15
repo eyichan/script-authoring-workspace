@@ -267,6 +267,16 @@ Beat row / Prop card / Asset card delete
   -> client refreshes workbench records, sidebar counts, and inspector statistics
 ```
 
+Implemented persisted workbench edit flow:
+
+```text
+Beat title / Prop title / Asset title blur or Enter
+  -> server action with projectId, scriptId, record id, and edited title
+  -> Prisma updateMany constrained to the current script
+  -> return WorkspaceSnapshot plus status message
+  -> client refreshes workbench records, sidebar counts, and inspector statistics
+```
+
 Implemented persisted collaboration flow:
 
 ```text
@@ -308,6 +318,7 @@ Persistence:
 - refresh preserves data
 - E2E tests assert Postgres rows after browser interactions
 - E2E tests assert Beat, Prop, and Asset records can be deleted from the UI and removed from Postgres.
+- E2E tests assert Beat, Prop, and Asset titles can be edited from the UI and persisted to Postgres.
 - E2E tests assert invite link and collaborator rows after browser interactions
 - E2E tests open the generated `/share/<token>` route and assert shared script content and reviewer state render from persisted records
 - E2E tests assert project rename updates both `Project.title` and the first `Script.title`, then survives refresh.

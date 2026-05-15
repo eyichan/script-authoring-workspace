@@ -220,7 +220,12 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   expect(script.assetTasks[0]?.status).toBe("done");
 
   await page.getByRole("button", { name: "Beats" }).click({ force: true });
-  await page.getByRole("button", { name: "Delete Beat 1: Pressure Turn" }).click({
+  await page.getByLabel("Beat title 1").fill("Revised Beat");
+  await page.getByLabel("Beat title 1").press("Enter");
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.beats[0]?.title)
+    .toBe("Revised Beat");
+  await page.getByRole("button", { name: "Delete Revised Beat" }).click({
     force: true,
   });
   await expect
@@ -228,7 +233,12 @@ test("persists script blocks and workbench records across refresh", async ({ pag
     .toBe(0);
 
   await page.getByRole("button", { name: "Props" }).click({ force: true });
-  await page.getByRole("button", { name: "Delete Continuity Tag 1" }).click({
+  await page.getByLabel("Prop title Continuity Tag 1").fill("Hero Key");
+  await page.getByLabel("Prop title Continuity Tag 1").press("Enter");
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.props[0]?.name)
+    .toBe("Hero Key");
+  await page.getByRole("button", { name: "Delete Hero Key" }).click({
     force: true,
   });
   await expect
@@ -236,7 +246,12 @@ test("persists script blocks and workbench records across refresh", async ({ pag
     .toBe(0);
 
   await page.getByRole("button", { name: "Assets" }).click({ force: true });
-  await page.getByRole("button", { name: "Delete Imported still reference 1" }).click({
+  await page.getByLabel("Asset title Imported still reference 1").fill("Revised Still");
+  await page.getByLabel("Asset title Imported still reference 1").press("Enter");
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.assetTasks[0]?.title)
+    .toBe("Revised Still");
+  await page.getByRole("button", { name: "Delete Revised Still" }).click({
     force: true,
   });
   await expect
