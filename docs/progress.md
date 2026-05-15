@@ -56,14 +56,15 @@ M5. Product verification and hardening
 - Added E2E coverage for Character -> Dialogue -> Character screenplay authoring.
 - Extracted the Collaboration inspector panel into `src/components/workspace/collaboration-panel.tsx`.
 - Added persisted collaborator role and status editing.
+- Extracted the Recents/Trash project library into `src/components/workspace/project-library.tsx`.
 
 ## In Progress
 
-- M2 database-backed workspace persistence.
+- M5 product verification and component hardening.
 
 ## Next
 
-1. Split the large workspace component once persistence behavior stabilizes.
+1. Continue splitting the large workspace component; the next likely candidate is the script editor canvas and toolbar.
 2. Improve PDF pagination and screenplay layout fidelity if export quality becomes a product priority.
 3. Expand E2E for share permission edge cases and any component split that changes workflow wiring.
 4. Continue splitting the script editor/workbench modules when implementation work touches those areas.
@@ -163,6 +164,14 @@ M5. Product verification and hardening
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 6 Playwright tests passed, including native PDF download and the Character -> Dialogue -> Character authoring flow.
   - `npx prisma migrate status`: succeeded after injecting `DATABASE_URL` from `.env.local`; database schema is up to date with 2 migrations.
+- After extracting the project library component:
+  - `src/components/workspace/project-library.tsx` owns the Recents/Active Projects/Trash UI, project cards, and project-card context menu controls.
+  - `src/components/script-forge-demo.tsx` still owns project state and passes create/open/trash/restore handlers into the extracted component.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npx playwright test tests/e2e/workspace-persistence.spec.ts --grep "project create"`: succeeded.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed.
 - After adding persisted collaboration state:
   - `npx prisma migrate dev --name collaboration_state`: succeeded and created the `ProjectShare` and `ProjectCollaborator` tables.
   - `npm run db:generate`: succeeded.
