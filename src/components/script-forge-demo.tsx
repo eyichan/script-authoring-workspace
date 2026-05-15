@@ -45,6 +45,7 @@ import {
   restoreProjectAction,
   trashProjectAction,
 } from "@/app/actions/projects";
+import { createInviteAction } from "@/app/actions/collaboration";
 import {
   deleteScriptBlockAction,
   duplicateScriptBlockAction,
@@ -97,6 +98,7 @@ import { seedWorkspace } from "@/lib/domain/seed";
 import type {
   AssetTask,
   Beat,
+  CollaborationState,
   DerivedScene,
   Prop,
   Project,
@@ -392,6 +394,10 @@ type WorkbenchMutationPayload = WorkspaceSnapshotPayload & {
   message: string;
 };
 
+type CollaborationMutationPayload = WorkspaceSnapshotPayload & {
+  message: string;
+};
+
 export function ScriptForgeDemo({
   initialActiveProjectId,
   initialProjects,
@@ -417,6 +423,9 @@ export function ScriptForgeDemo({
   const [props, setProps] = useState<Prop[]>(initialWorkspace.props);
   const [assetTasks, setAssetTasks] = useState<AssetTask[]>(
     initialWorkspace.assetTasks,
+  );
+  const [collaboration, setCollaboration] = useState<CollaborationState>(
+    initialWorkspace.collaboration,
   );
   const derived = useMemo(
     () => deriveScriptEntities(script.id, blocks),
@@ -450,6 +459,11 @@ export function ScriptForgeDemo({
   const [projectMutationPending, setProjectMutationPending] = useState(false);
   const [scriptMutationPending, setScriptMutationPending] = useState(false);
   const [workbenchMutationPending, setWorkbenchMutationPending] = useState(false);
+  const [collaborationMutationPending, setCollaborationMutationPending] =
+    useState(false);
+  const [collaborationMessage, setCollaborationMessage] = useState(
+    "Invite collaborators to create a persisted review link.",
+  );
   const editorMode = activePage === "Script";
   const activeProject =
     projects.find((project) => project.id === activeProjectId) ??
@@ -466,6 +480,7 @@ export function ScriptForgeDemo({
     setBeats(workspace.beats);
     setProps(workspace.props);
     setAssetTasks(workspace.assetTasks);
+    setCollaboration(workspace.collaboration);
     setActiveProjectId(workspace.project.id);
     setSceneDrafts({});
     setActiveScene(workspace.scenes[0]?.id ?? "");
@@ -543,6 +558,23 @@ export function ScriptForgeDemo({
       setWorkbenchMessage(snapshot.message);
     } finally {
       setWorkbenchMutationPending(false);
+    }
+  };
+
+  const runCollaborationMutation = async (
+    operation: () => Promise<CollaborationMutationPayload>,
+  ) => {
+    if (collaborationMutationPending) return;
+
+    setCollaborationMutationPending(true);
+    try {
+      const snapshot = await operation();
+      setProjects(snapshot.projects);
+      applyWorkspace(snapshot.workspace);
+      setCollaborationMessage(snapshot.message);
+      setInspectorTab("collab");
+    } finally {
+      setCollaborationMutationPending(false);
     }
   };
 
@@ -891,6 +923,10 @@ export function ScriptForgeDemo({
     );
   };
 
+  const handleCreateInvite = () => {
+    void runCollaborationMutation(() => createInviteAction(activeProject.id));
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-[#f4f6f5] text-[#242421]">
       <header className="flex h-12 items-center justify-between px-3">
@@ -905,9 +941,11 @@ export function ScriptForgeDemo({
         <Button
           variant="secondary"
           className="h-8 gap-1.5 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium text-[#171a19] shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] transition-[background-color,box-shadow,color,border-color] duration-150 hover:bg-[#f8faf9] active:translate-y-0"
+          disabled={collaborationMutationPending}
+          onClick={handleCreateInvite}
         >
           <Share2 className="size-[14px]" data-icon="inline-start" />
-          Invite
+          {collaborationMutationPending ? "Inviting" : "Invite"}
         </Button>
       </header>
 
@@ -1476,7 +1514,10 @@ export function ScriptForgeDemo({
                 </div>
                 </>
                 ) : (
-                  <CollaborationPanel />
+                  <CollaborationPanel
+                    collaboration={collaboration}
+                    message={collaborationMessage}
+                  />
                 )}
 
                 <Separator className="my-4" />
@@ -1484,7 +1525,7 @@ export function ScriptForgeDemo({
                   <Badge variant="secondary">Writer mode</Badge>
                   <div className="flex items-center gap-1 text-xs text-[#8a8982]">
                     <Users className="size-3.5" />
-                    3 reviewers
+                    {collaboration.collaborators.length} collaborators
                   </div>
                 </div>
               </div>
@@ -2011,24 +2052,33 @@ function CoverPreview() {
   );
 }
 
-function CollaborationPanel() {
-  const reviewers = [
-    { name: "YI", role: "Owner", status: "Editing locally" },
-    { name: "MK", role: "Producer", status: "2 notes open" },
-    { name: "AL", role: "Script editor", status: "Last seen today" },
-  ];
-
+function CollaborationPanel({
+  collaboration,
+  message,
+}: {
+  collaboration: CollaborationState;
+  message: string;
+}) {
   return (
     <div className="mt-5 space-y-3">
-      {reviewers.map((reviewer) => (
+      <div className="rounded-xl border border-[#dce7dd] bg-[#f4faf5] p-3">
+        <div className="text-[13px] font-semibold text-[#2e6e45]">
+          Share link
+        </div>
+        <div className="mt-2 break-all rounded-md bg-[#fcfdfc]/90 px-2.5 py-2 text-[12px] leading-5 text-[#58635e]">
+          {collaboration.shareUrl ?? "No share link yet"}
+        </div>
+      </div>
+
+      {collaboration.collaborators.map((reviewer) => (
         <div
-          key={reviewer.name}
+          key={reviewer.id}
           className="rounded-xl border border-[#e4e8e6] bg-[#fcfdfc] p-3"
         >
           <div className="flex items-center gap-2">
             <Avatar className="size-8 bg-[#eef3ef]">
               <AvatarFallback className="bg-transparent text-[11px] font-semibold text-[#2e6248]">
-                {reviewer.name}
+                {reviewer.initials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -2043,7 +2093,7 @@ function CollaborationPanel() {
         </div>
       ))}
       <div className="debug-hatch rounded-xl border border-dashed border-[#d2d2cc] p-3 text-[12px] leading-5 text-[#6f6f68]">
-        Live collaboration is represented as local mock state in this demo.
+        {message}
       </div>
     </div>
   );

@@ -146,6 +146,25 @@ async function main() {
     });
   }
 
+  for (const collaborator of workspace.collaboration.collaborators) {
+    await prisma.projectCollaborator.upsert({
+      where: { id: collaborator.id },
+      update: {
+        initials: collaborator.initials,
+        role: collaborator.role,
+        status: collaborator.status,
+      },
+      create: {
+        id: collaborator.id,
+        projectId: collaborator.projectId,
+        initials: collaborator.initials,
+        role: collaborator.role,
+        status: collaborator.status,
+        createdAt: new Date(collaborator.createdAt),
+      },
+    });
+  }
+
   console.log(`Seeded workspace ${workspace.project.id}`);
 }
 

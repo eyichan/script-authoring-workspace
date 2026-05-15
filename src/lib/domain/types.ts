@@ -113,6 +113,21 @@ export type AssetTask = {
   createdAt: string;
 };
 
+export type ProjectCollaborator = {
+  id: string;
+  projectId: string;
+  initials: string;
+  role: string;
+  status: string;
+  createdAt: string;
+};
+
+export type CollaborationState = {
+  shareUrl?: string;
+  shareToken?: string;
+  collaborators: ProjectCollaborator[];
+};
+
 export type WorkspaceView = {
   project: Project;
   script: Script;
@@ -123,4 +138,5 @@ export type WorkspaceView = {
   beats: Beat[];
   props: Prop[];
   assetTasks: AssetTask[];
+  collaboration: CollaborationState;
 };

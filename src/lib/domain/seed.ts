@@ -93,4 +93,16 @@ export const seedWorkspace: WorkspaceView = {
     },
   ],
   assetTasks: [],
+  collaboration: {
+    collaborators: [
+      {
+        id: "collaborator-owner-demo",
+        projectId: "project-demo",
+        initials: "YI",
+        role: "Owner",
+        status: "Editing",
+        createdAt,
+      },
+    ],
+  },
 };

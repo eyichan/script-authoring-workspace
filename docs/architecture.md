@@ -26,6 +26,7 @@ Domain code owns screenplay concepts and pure transformations:
 - prop
 - asset task
 - trash / project lifecycle
+- collaboration state
 
 Domain code should not import React, Prisma, Next.js, or UI components.
 
@@ -103,6 +104,7 @@ Current persistence behavior:
 - `src/app/actions/projects.ts` persists project create, open, trash, and restore flows through server actions.
 - `src/app/actions/script-blocks.ts` persists script block insert, text update, duplicate, delete, and resequencing flows through server actions.
 - `src/app/actions/workbench.ts` persists manual Beats, Props, and Assets creation/import flows through server actions.
+- `src/app/actions/collaboration.ts` persists invite link creation and collaborator records through server actions.
 
 ### UI
 
@@ -146,6 +148,8 @@ Current UI behavior:
 - Home opens a local Recents project library with Active and Trash sections.
 - Projects support local create, open, delete-to-trash, restore, and right-click project actions.
 - The inspector export action downloads a real script package from current persisted script blocks. FDX and Fountain are file exports; PDF currently downloads a printable HTML package that can be printed to PDF by the browser.
+- The top-level Invite action creates a persisted project share link and reviewer record, then opens the Collaboration inspector tab.
+- The Collaboration inspector tab renders persisted collaborators and the current share link instead of local mock reviewers.
 
 ### State
 
@@ -239,6 +243,16 @@ Beats / Props / Assets action
   -> client refreshes cards, sidebar counts, and inspector statistics
 ```
 
+Implemented persisted collaboration flow:
+
+```text
+Invite click
+  -> server action
+  -> Prisma upsert ProjectShare and create ProjectCollaborator
+  -> return WorkspaceSnapshot plus status message
+  -> client refreshes Collaboration panel and collaborator count
+```
+
 ## Verification Gates
 
 Baseline:
@@ -266,6 +280,7 @@ Persistence:
 - Seed writes deterministic workspace records
 - refresh preserves data
 - E2E tests assert Postgres rows after browser interactions
+- E2E tests assert invite link and collaborator rows after browser interactions
 
 ## Open Risks
 

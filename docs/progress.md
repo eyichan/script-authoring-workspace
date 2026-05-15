@@ -46,6 +46,7 @@ M2. Persistence foundation
 - Added database-backed Beats, Props, and Assets creation/import actions.
 - Added Playwright E2E coverage for project lifecycle, script block persistence, and Workbench persistence.
 - Added real script export downloads for FDX, Fountain, and printable HTML packages.
+- Added persisted Invite / Collaboration state with project share links and collaborator records.
 
 ## In Progress
 
@@ -53,11 +54,10 @@ M2. Persistence foundation
 
 ## Next
 
-1. Add Share / Invite / Collaboration product states.
-2. Split the large workspace component once persistence behavior stabilizes.
-3. Add native binary PDF export if browser-printable HTML is not sufficient.
-4. Add delete/edit flows for Beats, Props, and Assets if the product requires full CRUD rather than create-only module records.
-5. Expand E2E for character/dialogue and share/collaboration once those flows become persisted product behavior.
+1. Split the large workspace component once persistence behavior stabilizes.
+2. Add native binary PDF export if browser-printable HTML is not sufficient.
+3. Add delete/edit flows for Beats, Props, Assets, and collaborators if the product requires full CRUD rather than create-only records.
+4. Expand E2E for character/dialogue editing and native share routes if those flows become persisted product behavior.
 
 ## Verification Log
 
@@ -143,6 +143,15 @@ M2. Persistence foundation
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
   - `npm run test:e2e`: succeeded; 3 Playwright tests passed, including downloading a Final Draft export from persisted script blocks and verifying the `.fdx` file content contains `INT. EXPORT BAY - DAY`.
+- After adding persisted collaboration state:
+  - `npx prisma migrate dev --name collaboration_state`: succeeded and created the `ProjectShare` and `ProjectCollaborator` tables.
+  - `npm run db:generate`: succeeded.
+  - `npm run test:e2e`: succeeded; 4 Playwright tests passed, including Invite creating a persisted `/share/<token>` link and `Reviewer 2` collaborator.
+  - `npx prisma migrate status`: succeeded; database schema is up to date with 2 migrations.
+  - `npm run db:seed`: succeeded and upserts the demo owner collaborator.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
 
 ## Decisions
 
@@ -157,3 +166,4 @@ M2. Persistence foundation
 - Use `127.0.0.1` for the local Docker Postgres connection string on this host.
 - Keep `.env.local` untracked; commit `.env.example` so the database URL contract is recoverable in later sessions.
 - Treat PDF as printable HTML until a native PDF renderer is selected; do not label that path as binary PDF output.
+- Collaboration currently covers persisted invite/share state and collaborator display, not real-time multiplayer editing.

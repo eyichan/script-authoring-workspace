@@ -12,6 +12,7 @@ import type {
   AssetTask,
   AssetTaskKind,
   Project,
+  ProjectCollaborator,
   Script,
   ScriptBlock,
   ScriptBlockType,
@@ -34,7 +35,13 @@ export type WorkbenchMutationSnapshot = WorkspaceSnapshot & {
   message: string;
 };
 
+export type CollaborationMutationSnapshot = WorkspaceSnapshot & {
+  message: string;
+};
+
 const projectInclude = {
+  share: true,
+  collaborators: { orderBy: { createdAt: "asc" } },
   scripts: {
     orderBy: { createdAt: "asc" },
     take: 1,
@@ -127,6 +134,19 @@ function mapAssetTask(
   };
 }
 
+function mapCollaborator(
+  collaborator: ProjectWithWorkspace["collaborators"][number],
+): ProjectCollaborator {
+  return {
+    id: collaborator.id,
+    projectId: collaborator.projectId,
+    initials: collaborator.initials,
+    role: collaborator.role,
+    status: collaborator.status,
+    createdAt: serializeDate(collaborator.createdAt),
+  };
+}
+
 function mapWorkspace(project: ProjectWithWorkspace): WorkspaceView {
   const scriptRecord = project.scripts[0];
 
@@ -162,6 +182,11 @@ function mapWorkspace(project: ProjectWithWorkspace): WorkspaceView {
       imageNote: prop.imageNote,
     })),
     assetTasks: scriptRecord.assetTasks.map(mapAssetTask),
+    collaboration: {
+      shareToken: project.share?.token,
+      shareUrl: project.share ? `/share/${project.share.token}` : undefined,
+      collaborators: project.collaborators.map(mapCollaborator),
+    },
   };
 }
 
@@ -201,6 +226,14 @@ async function createWorkspaceProject(title: string) {
     data: {
       id: projectId,
       title,
+      collaborators: {
+        create: {
+          id: `collaborator-${randomUUID()}`,
+          initials: "YI",
+          role: "Owner",
+          status: "Editing",
+        },
+      },
       scripts: {
         create: {
           id: scriptId,
@@ -531,5 +564,46 @@ export async function importAssetSnapshot({
   return {
     ...(await getWorkspaceSnapshot(projectId)),
     message: `${title} imported into the persisted asset library.`,
+  };
+}
+
+export async function createInviteSnapshot({
+  projectId,
+}: {
+  projectId: string;
+}): Promise<CollaborationMutationSnapshot> {
+  const token = randomUUID().replace(/-/g, "");
+  const collaboratorCount = await prisma.projectCollaborator.count({
+    where: { projectId },
+  });
+  const reviewerNumber = collaboratorCount + 1;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.projectShare.upsert({
+      where: { projectId },
+      update: {},
+      create: {
+        projectId,
+        token,
+      },
+    });
+
+    await tx.projectCollaborator.create({
+      data: {
+        id: `collaborator-${randomUUID()}`,
+        projectId,
+        initials: `R${Math.min(reviewerNumber, 9)}`,
+        role: `Reviewer ${reviewerNumber}`,
+        status: "Invited",
+      },
+    });
+  });
+
+  const snapshot = await getWorkspaceSnapshot(projectId);
+  const shareUrl = snapshot.workspace.collaboration.shareUrl ?? "/share/pending";
+
+  return {
+    ...snapshot,
+    message: `Invite link ready: ${shareUrl}`,
   };
 }

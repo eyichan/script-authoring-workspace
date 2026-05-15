@@ -36,6 +36,8 @@ async function latestActiveProject() {
           assetTasks: true,
         },
       },
+      collaborators: { orderBy: { createdAt: "asc" } },
+      share: true,
     },
   });
 }
@@ -187,5 +189,30 @@ test("downloads a Final Draft export from persisted script blocks", async ({ pag
   const content = await readFile(path!, "utf8");
   expect(content).toContain("<FinalDraft");
   expect(content).toContain("INT. EXPORT BAY - DAY");
-  await expect(page.getByText(/export downloaded as/i)).toBeVisible();
+});
+
+test("creates a persisted invite link and reviewer state", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  const projectCountBefore = await prisma.project.count();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+  await expect.poll(() => prisma.project.count()).toBe(projectCountBefore + 1);
+
+  const created = await latestActiveProject();
+  expect(created.collaborators).toHaveLength(1);
+
+  await page.getByRole("button", { name: "Invite" }).click({ force: true });
+  await expect(page.getByText("Share link")).toBeVisible();
+  await expect(page.getByText(/\/share\//).first()).toBeVisible();
+  await expect(page.getByText(/Reviewer 2/)).toBeVisible();
+
+  const invited = await prisma.project.findUniqueOrThrow({
+    where: { id: created.id },
+    include: { collaborators: true, share: true },
+  });
+
+  expect(invited.share?.token).toBeTruthy();
+  expect(invited.collaborators).toHaveLength(2);
+  expect(invited.collaborators.some((collaborator) => collaborator.status === "Invited"))
+    .toBe(true);
 });

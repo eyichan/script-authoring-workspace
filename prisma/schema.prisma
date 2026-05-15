@@ -39,13 +39,36 @@ enum AssetTaskStatus {
 }
 
 model Project {
-  id        String        @id
-  title     String
-  status    ProjectStatus @default(active)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  trashedAt DateTime?
-  scripts   Script[]
+  id            String                @id
+  title         String
+  status        ProjectStatus         @default(active)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  trashedAt     DateTime?
+  scripts       Script[]
+  share         ProjectShare?
+  collaborators ProjectCollaborator[]
+}
+
+model ProjectShare {
+  projectId String   @id
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectCollaborator {
+  id        String   @id
+  projectId String
+  initials  String
+  role      String
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model Script {
