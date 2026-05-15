@@ -39,19 +39,21 @@ M2. Persistence foundation
 - Added Prisma 7 config, schema, initial migration, and Postgres adapter-backed Prisma client.
 - Added deterministic Postgres seed script for the current local workspace model.
 - Added database scripts for Prisma generate, validate, migrate, seed, and studio.
+- Added server-side workspace loading from Postgres into the existing domain `WorkspaceView`.
+- Replaced Recents project create, open, delete-to-trash, and restore with database-backed server actions.
+- Added `.env.example` to Git while keeping `.env.local` ignored for local runtime credentials.
 
 ## In Progress
 
-- M2 persistence foundation.
+- M2 database-backed project lifecycle.
 
 ## Next
 
-1. Wire route-backed workspace loading from Postgres through a server-side data layer.
-2. Replace local project lifecycle state with persisted project records.
-3. Add server actions for script block insert, edit, duplicate, delete, and resequencing.
-4. Preserve the existing direct-on-canvas insertion interaction while moving mutations to the database.
-5. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, and refresh persistence.
-6. Add export/share/collaboration product states after persistence-backed editing is stable.
+1. Add server actions for script block insert, edit, duplicate, delete, and resequencing.
+2. Preserve the existing direct-on-canvas insertion interaction while moving script mutations to the database.
+3. Persist manual Beats, Props, and Assets module mutations.
+4. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, and refresh persistence.
+5. Add export/share/collaboration product states after persistence-backed editing is stable.
 
 ## Verification Log
 
@@ -106,6 +108,13 @@ M2. Persistence foundation
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
   - `npm audit --audit-level=moderate`: failed with 5 moderate dependency advisories in transitive Prisma/Next dependencies; `npm audit fix --force` was not run because it proposes breaking downgrades.
+- After wiring database-backed project lifecycle:
+  - `npm test`: succeeded, 6 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded; `/` is dynamic server-rendered on demand.
+  - `npx prisma migrate status`: succeeded; database schema is up to date.
+  - Browser smoke test on `http://localhost:3001`: opened Recents, created `Untitled Script 2`, verified Active Projects became 2, deleted it to Trash, verified Trash became 1, restored it, refreshed the page, and verified Active Projects remained 2 and Trash returned to 0 from Postgres-backed initial loading.
+  - Database verification query returned 2 active projects, 0 trashed projects, and 2 scripts after the smoke test.
 
 ## Decisions
 
@@ -118,3 +127,4 @@ M2. Persistence foundation
 - Keep the first functional pass local-state only so workflow behavior can be validated before introducing persistence.
 - Use Prisma 7 with `@prisma/adapter-pg`; do not use a bare `new PrismaClient()` in app code or seed scripts.
 - Use `127.0.0.1` for the local Docker Postgres connection string on this host.
+- Keep `.env.local` untracked; commit `.env.example` so the database URL contract is recoverable in later sessions.

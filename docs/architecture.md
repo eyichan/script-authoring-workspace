@@ -70,12 +70,15 @@ Planned stack:
 Current paths:
 
 ```text
+.env.example
 prisma/schema.prisma
 prisma/migrations/
 prisma/seed.ts
 prisma.config.ts
 docker-compose.yml
 src/lib/db/prisma.ts
+src/lib/db/workspace.ts
+src/app/actions/projects.ts
 ```
 
 Planned paths:
@@ -93,6 +96,8 @@ Current persistence behavior:
 - `prisma.config.ts` keeps the database URL in Prisma config, following Prisma 7 conventions.
 - `src/lib/db/prisma.ts` initializes Prisma through `PrismaPg` and keeps a development singleton.
 - `prisma/seed.ts` upserts the deterministic local seed workspace into Postgres without deleting existing records.
+- `src/lib/db/workspace.ts` maps Prisma records into the domain `WorkspaceView` shape and derives scenes, characters, and locations from persisted script blocks.
+- `src/app/actions/projects.ts` persists project create, open, trash, and restore flows through server actions.
 
 ### UI
 
@@ -174,13 +179,15 @@ User action
   -> render Sidebar / Script / Scenes / Characters / Locations
 ```
 
-Local project lifecycle flow:
+Project lifecycle flow:
 
 ```text
 Home / project selector
   -> Recents project library
-  -> create/open/delete-to-trash/restore Project in React state
-  -> selected Project title updates workspace shell
+  -> server action
+  -> Prisma Project/Script mutation or load
+  -> return WorkspaceSnapshot
+  -> selected Project title and workspace shell update
 ```
 
 Implemented local flow:

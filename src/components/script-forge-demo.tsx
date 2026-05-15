@@ -39,6 +39,12 @@ import {
   Zap,
 } from "lucide-react";
 
+import {
+  createProjectAction,
+  openProjectAction,
+  restoreProjectAction,
+  trashProjectAction,
+} from "@/app/actions/projects";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,11 +72,8 @@ import {
   parseSceneHeading,
 } from "@/lib/domain/screenplay";
 import {
-  createProject,
   getActiveProjects,
   getTrashedProjects,
-  moveProjectToTrash,
-  restoreProject,
 } from "@/lib/domain/projects";
 import {
   deleteScriptBlock,
@@ -86,8 +89,10 @@ import type {
   Prop,
   Project,
   SceneHeadingParts,
+  Script,
   ScriptBlock,
   ScriptBlockType,
+  WorkspaceView,
 } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
@@ -355,33 +360,50 @@ function getBlockSummary(block: ScriptBlock): string {
   return `${getBlockLabel(block.type)} block`;
 }
 
-export function ScriptForgeDemo() {
+type ScriptForgeDemoProps = {
+  initialActiveProjectId?: string;
+  initialProjects?: Project[];
+  initialWorkspace?: WorkspaceView;
+  persistenceLabel?: string;
+};
+
+export function ScriptForgeDemo({
+  initialActiveProjectId,
+  initialProjects,
+  initialWorkspace = seedWorkspace,
+  persistenceLabel = "Local project lifecycle before database persistence.",
+}: ScriptForgeDemoProps) {
+  const initialProjectList = initialProjects?.length ? initialProjects : seedProjects;
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("workspace");
-  const [projects, setProjects] = useState<Project[]>(seedProjects);
-  const [activeProjectId, setActiveProjectId] = useState(seedWorkspace.project.id);
+  const [projects, setProjects] = useState<Project[]>(initialProjectList);
+  const [activeProjectId, setActiveProjectId] = useState(
+    initialActiveProjectId ?? initialWorkspace.project.id,
+  );
+  const [script, setScript] = useState<Script>(initialWorkspace.script);
   const [activePage, setActivePage] = useState<PageName>("Script");
-  const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
-  const nextBlockNumber = useRef(seedWorkspace.blocks.length + 1);
-  const nextProjectNumber = useRef(seedProjects.length + 1);
-  const nextBeatNumber = useRef(seedWorkspace.beats.length + 1);
-  const nextPropNumber = useRef(seedWorkspace.props.length + 1);
-  const nextAssetNumber = useRef(seedWorkspace.assetTasks.length + 1);
+  const [blocks, setBlocks] = useState<ScriptBlock[]>(initialWorkspace.blocks);
+  const nextBlockNumber = useRef(initialWorkspace.blocks.length + 1);
+  const nextBeatNumber = useRef(initialWorkspace.beats.length + 1);
+  const nextPropNumber = useRef(initialWorkspace.props.length + 1);
+  const nextAssetNumber = useRef(initialWorkspace.assetTasks.length + 1);
   const nextRevisionNumber = useRef(1);
   const blockInputRefs = useRef<Record<string, BlockInputElement | null>>({});
-  const [beats, setBeats] = useState<Beat[]>(seedWorkspace.beats);
-  const [props, setProps] = useState<Prop[]>(seedWorkspace.props);
-  const [assetTasks, setAssetTasks] = useState<AssetTask[]>(seedWorkspace.assetTasks);
+  const [beats, setBeats] = useState<Beat[]>(initialWorkspace.beats);
+  const [props, setProps] = useState<Prop[]>(initialWorkspace.props);
+  const [assetTasks, setAssetTasks] = useState<AssetTask[]>(
+    initialWorkspace.assetTasks,
+  );
   const derived = useMemo(
-    () => deriveScriptEntities(seedWorkspace.script.id, blocks),
-    [blocks],
+    () => deriveScriptEntities(script.id, blocks),
+    [blocks, script.id],
   );
   const [activeScene, setActiveScene] = useState(
-    derived.scenes[0]?.id ?? "",
+    initialWorkspace.scenes[0]?.id ?? "",
   );
   const [editorTab, setEditorTab] = useState<EditorTab>("script");
   const [activeTool, setActiveTool] = useState<ToolLabel>("Action");
   const [activeBlockId, setActiveBlockId] = useState(
-    seedWorkspace.blocks.at(-1)?.id ?? "",
+    initialWorkspace.blocks.at(-1)?.id ?? "",
   );
   const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
   const [sceneDrafts, setSceneDrafts] = useState<Record<string, SceneHeadingParts>>({});
@@ -400,11 +422,61 @@ export function ScriptForgeDemo() {
     "Select a page action to create a local mock state.",
   );
   const [generatedStills, setGeneratedStills] = useState<string[]>([]);
+  const [projectMutationPending, setProjectMutationPending] = useState(false);
   const editorMode = activePage === "Script";
   const activeProject =
-    projects.find((project) => project.id === activeProjectId) ?? seedWorkspace.project;
+    projects.find((project) => project.id === activeProjectId) ??
+    initialWorkspace.project;
   const activeProjects = useMemo(() => getActiveProjects(projects), [projects]);
   const trashedProjects = useMemo(() => getTrashedProjects(projects), [projects]);
+
+  const applyWorkspace = (workspace: WorkspaceView) => {
+    setScript(workspace.script);
+    setBlocks(workspace.blocks);
+    setBeats(workspace.beats);
+    setProps(workspace.props);
+    setAssetTasks(workspace.assetTasks);
+    setActiveProjectId(workspace.project.id);
+    setActivePage("Script");
+    setEditorTab("script");
+    setSceneDrafts({});
+    setActiveScene(workspace.scenes[0]?.id ?? "");
+    setActiveBlockId(workspace.blocks.at(-1)?.id ?? "");
+    setPendingFocusBlockId(workspace.blocks.at(-1)?.id ?? null);
+    nextBlockNumber.current = workspace.blocks.length + 1;
+    nextBeatNumber.current = workspace.beats.length + 1;
+    nextPropNumber.current = workspace.props.length + 1;
+    nextAssetNumber.current = workspace.assetTasks.length + 1;
+  };
+
+  const applySnapshot = (snapshot: {
+    projects: Project[];
+    workspace: WorkspaceView;
+    activeProjectId: string;
+  }) => {
+    setProjects(snapshot.projects);
+    applyWorkspace(snapshot.workspace);
+    setActiveProjectId(snapshot.activeProjectId);
+    setWorkspaceMode("workspace");
+  };
+
+  const runProjectMutation = async (
+    operation: () => Promise<{
+      projects: Project[];
+      workspace: WorkspaceView;
+      activeProjectId: string;
+    }>,
+  ) => {
+    if (projectMutationPending) return;
+
+    setProjectMutationPending(true);
+    try {
+      const snapshot = await operation();
+      applySnapshot(snapshot);
+    } finally {
+      setProjectMutationPending(false);
+    }
+  };
 
   useEffect(() => {
     if (!pendingFocusBlockId) return;
@@ -523,7 +595,7 @@ export function ScriptForgeDemo() {
     setBlocks((current) => {
       const nextBlock: ScriptBlock = {
         id,
-        scriptId: seedWorkspace.script.id,
+        scriptId: script.id,
         type,
         text: "",
         position: 0,
@@ -691,7 +763,7 @@ export function ScriptForgeDemo() {
     nextBeatNumber.current += 1;
     const nextBeat: Beat = {
       id: `beat-local-${sequence}`,
-      scriptId: seedWorkspace.script.id,
+      scriptId: script.id,
       title: `Beat ${sequence}: Pressure Turn`,
       description: "A local outline beat created from the Beats page.",
       color: "racing-green",
@@ -707,7 +779,7 @@ export function ScriptForgeDemo() {
     nextPropNumber.current += 1;
     const nextProp: Prop = {
       id: `prop-local-${sequence}`,
-      scriptId: seedWorkspace.script.id,
+      scriptId: script.id,
       name: `Continuity Tag ${sequence}`,
       category: "Continuity",
       description: "A local prop record created from the Props page.",
@@ -724,7 +796,7 @@ export function ScriptForgeDemo() {
     const isVideo = sequence % 2 === 0;
     const nextAsset: AssetTask = {
       id: `asset-local-${sequence}`,
-      scriptId: seedWorkspace.script.id,
+      scriptId: script.id,
       kind: isVideo ? "concept-trailer" : "scene-dramatization",
       title: isVideo
         ? `Imported video reference ${sequence}`
@@ -738,48 +810,19 @@ export function ScriptForgeDemo() {
   };
 
   const handleCreateProject = () => {
-    const sequence = nextProjectNumber.current;
-    nextProjectNumber.current += 1;
-    const timestamp = `${localCreatedAt}-project-${sequence}`;
-    const nextProject: Project = {
-      id: `project-local-${sequence}`,
-      title: `Untitled Script ${sequence}`,
-      status: "active",
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-
-    setProjects((current) => createProject(current, nextProject));
-    setActiveProjectId(nextProject.id);
-    setWorkspaceMode("workspace");
-    setActivePage("Script");
-    setEditorTab("script");
+    void runProjectMutation(createProjectAction);
   };
 
   const handleOpenProject = (projectId: string) => {
-    setActiveProjectId(projectId);
-    setWorkspaceMode("workspace");
-    setActivePage("Script");
-    setEditorTab("script");
+    void runProjectMutation(() => openProjectAction(projectId));
   };
 
   const handleTrashProject = (projectId: string) => {
-    const timestamp = `${localCreatedAt}-trash-${nextRevisionNumber.current++}`;
-    setProjects((current) => moveProjectToTrash(current, projectId, timestamp));
-    if (projectId === activeProjectId) {
-      const fallbackProject = activeProjects.find((project) => project.id !== projectId);
-      if (fallbackProject) {
-        setActiveProjectId(fallbackProject.id);
-        return;
-      }
-      setWorkspaceMode("projects");
-    }
+    void runProjectMutation(() => trashProjectAction(projectId));
   };
 
   const handleRestoreProject = (projectId: string) => {
-    const timestamp = `${localCreatedAt}-restore-${nextRevisionNumber.current++}`;
-    setProjects((current) => restoreProject(current, projectId, timestamp));
-    setActiveProjectId(projectId);
+    void runProjectMutation(() => restoreProjectAction(projectId));
   };
 
   const handleWorkbenchAction = () => {
@@ -832,6 +875,8 @@ export function ScriptForgeDemo() {
         <ProjectLibrary
           activeProjectId={activeProjectId}
           activeProjects={activeProjects}
+          persistenceLabel={persistenceLabel}
+          projectMutationPending={projectMutationPending}
           trashedProjects={trashedProjects}
           onCreateProject={handleCreateProject}
           onOpenProject={handleOpenProject}
@@ -1403,6 +1448,8 @@ export function ScriptForgeDemo() {
 function ProjectLibrary({
   activeProjectId,
   activeProjects,
+  persistenceLabel,
+  projectMutationPending,
   trashedProjects,
   onCreateProject,
   onOpenProject,
@@ -1411,6 +1458,8 @@ function ProjectLibrary({
 }: {
   activeProjectId: string;
   activeProjects: Project[];
+  persistenceLabel: string;
+  projectMutationPending: boolean;
   trashedProjects: Project[];
   onCreateProject: () => void;
   onOpenProject: (projectId: string) => void;
@@ -1424,15 +1473,16 @@ function ProjectLibrary({
           <div>
             <h1 className="text-[16px] font-normal text-[#242421]">Recents</h1>
             <p className="text-[12px] text-[#7d837f]">
-              Local project lifecycle before database persistence.
+              {persistenceLabel}
             </p>
           </div>
           <Button
             className="h-8 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0"
+            disabled={projectMutationPending}
             onClick={onCreateProject}
           >
             <Plus className="size-[14px]" data-icon="inline-start" />
-            New Project
+            {projectMutationPending ? "Saving" : "New Project"}
           </Button>
         </header>
 
@@ -1449,6 +1499,7 @@ function ProjectLibrary({
                     key={project.id}
                     project={project}
                     active={project.id === activeProjectId}
+                    disabled={projectMutationPending}
                     statusLabel={project.id === activeProjectId ? "Open now" : "Active"}
                     onOpen={() => onOpenProject(project.id)}
                     onTrash={() => onTrashProject(project.id)}
@@ -1469,6 +1520,7 @@ function ProjectLibrary({
                       key={project.id}
                       project={project}
                       active={false}
+                      disabled={projectMutationPending}
                       statusLabel="In Trash"
                       onRestore={() => onRestoreProject(project.id)}
                     />
@@ -1490,6 +1542,7 @@ function ProjectLibrary({
 function ProjectCard({
   project,
   active,
+  disabled = false,
   statusLabel,
   onOpen,
   onTrash,
@@ -1497,6 +1550,7 @@ function ProjectCard({
 }: {
   project: Project;
   active: boolean;
+  disabled?: boolean;
   statusLabel: string;
   onOpen?: () => void;
   onTrash?: () => void;
@@ -1524,6 +1578,7 @@ function ProjectCard({
           <Button
             variant="secondary"
             className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+            disabled={disabled}
             onClick={onOpen}
           >
             <ExternalLink className="size-[14px]" data-icon="inline-start" />
@@ -1534,6 +1589,7 @@ function ProjectCard({
           <Button
             variant="secondary"
             className="h-8 rounded-full border border-[#efd2d2] bg-[#fffafa] px-3 text-[12px] font-medium text-[#a04444] shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:bg-[#fff5f5] active:translate-y-0"
+            disabled={disabled}
             onClick={onTrash}
           >
             <Trash2 className="size-[14px]" data-icon="inline-start" />
@@ -1544,6 +1600,7 @@ function ProjectCard({
           <Button
             variant="secondary"
             className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+            disabled={disabled}
             onClick={onRestore}
           >
             <RefreshCcw className="size-[14px]" data-icon="inline-start" />
@@ -1564,13 +1621,13 @@ function ProjectCard({
           </ContextMenuLabel>
         </ContextMenuGroup>
         {onOpen ? (
-          <ContextMenuItem onClick={onOpen}>
+          <ContextMenuItem disabled={disabled} onClick={onOpen}>
             <ExternalLink className="size-4" />
             Open
           </ContextMenuItem>
         ) : null}
         {onRestore ? (
-          <ContextMenuItem onClick={onRestore}>
+          <ContextMenuItem disabled={disabled} onClick={onRestore}>
             <RefreshCcw className="size-4" />
             Restore
           </ContextMenuItem>
@@ -1578,7 +1635,11 @@ function ProjectCard({
         {onTrash ? (
           <>
             <ContextMenuSeparator />
-            <ContextMenuItem variant="destructive" onClick={onTrash}>
+            <ContextMenuItem
+              disabled={disabled}
+              variant="destructive"
+              onClick={onTrash}
+            >
               <Trash2 className="size-4" />
               Delete to Trash
             </ContextMenuItem>
