@@ -58,6 +58,7 @@ M5. Product verification and hardening
 - Added persisted collaborator role and status editing.
 - Extracted the Recents/Trash project library into `src/components/workspace/project-library.tsx`.
 - Extracted the script editor canvas and floating insert toolbar into `src/components/workspace/script-editor-canvas.tsx`.
+- Extracted the Writing inspector shell into `src/components/workspace/inspector-panel.tsx`.
 
 ## In Progress
 
@@ -65,7 +66,7 @@ M5. Product verification and hardening
 
 ## Next
 
-1. Continue splitting the large workspace component; the next likely candidates are the inspector shell and workbench page views.
+1. Continue splitting the large workspace component; the next likely candidate is the workbench page views.
 2. Improve PDF pagination and screenplay layout fidelity if export quality becomes a product priority.
 3. Expand E2E for share permission edge cases and any component split that changes workflow wiring.
 4. Continue splitting the script editor/workbench modules when implementation work touches those areas.
@@ -176,6 +177,13 @@ M5. Product verification and hardening
 - After extracting the script editor canvas:
   - `src/components/workspace/script-editor-canvas.tsx` owns the floating script block toolbar, script paper rendering, scene structured controls, character suggestions, block textarea rendering, focus resize behavior, and block context menu UI.
   - `src/components/script-forge-demo.tsx` still owns script state, derived data, persistence actions, and mutation handlers.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed.
+- After extracting the inspector panel:
+  - `src/components/workspace/inspector-panel.tsx` owns the Writing side panel shell, Info/Collaboration tabs, pagination/export controls, statistics display, production buttons, collaborator footer, and `CollaborationPanel` composition.
+  - `src/components/script-forge-demo.tsx` still owns inspector state, export execution, production action state, and collaboration mutation handlers.
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm test`: succeeded, 10 tests passed.

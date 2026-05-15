@@ -120,6 +120,7 @@ Extracted workspace component:
 
 ```text
 src/components/workspace/collaboration-panel.tsx
+src/components/workspace/inspector-panel.tsx
 src/components/workspace/project-library.tsx
 src/components/workspace/script-editor-canvas.tsx
 ```
