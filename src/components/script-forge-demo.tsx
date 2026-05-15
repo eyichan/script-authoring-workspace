@@ -10,6 +10,8 @@ import {
   ChevronDown,
   Clapperboard,
   Columns2,
+  Copy,
+  ExternalLink,
   FileText,
   Film,
   Home,
@@ -29,6 +31,7 @@ import {
   ScrollText,
   Share2,
   Subtitles,
+  Trash2,
   User,
   Users,
   Video,
@@ -39,6 +42,15 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -294,6 +306,24 @@ function buildSceneHeading(parts: SceneHeadingParts): string {
   });
 }
 
+function getBlockLabel(type: ScriptBlockType): string {
+  return blockTypeToTool[type];
+}
+
+function getBlockSummary(block: ScriptBlock): string {
+  const text = block.text.trim();
+  if (text) return text;
+
+  return `${getBlockLabel(block.type)} block`;
+}
+
+function resequenceBlocks(blocks: ScriptBlock[]): ScriptBlock[] {
+  return blocks.map((block, index) => ({
+    ...block,
+    position: index + 1,
+  }));
+}
+
 export function ScriptForgeDemo() {
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
@@ -463,10 +493,7 @@ export function ScriptForgeDemo() {
 
       nextBlocks.splice(insertIndex, 0, nextBlock);
 
-      return nextBlocks.map((block, index) => ({
-        ...block,
-        position: index + 1,
-      }));
+      return resequenceBlocks(nextBlocks);
     });
     setActiveBlockId(id);
     setPendingFocusBlockId(id);
@@ -497,6 +524,111 @@ export function ScriptForgeDemo() {
     handleInsertScriptBlock(nextToolByBlockType[block.type], block.id);
   };
 
+  const focusBlockById = (blockId: string) => {
+    const block = blocks.find((current) => current.id === blockId);
+
+    setActivePage("Script");
+    setEditorTab("script");
+    setActiveBlockId(blockId);
+    if (block?.type === "scene") {
+      setActiveScene(`scene-${block.id}`);
+    }
+    setPendingFocusBlockId(blockId);
+  };
+
+  const handleDuplicateScriptBlock = (block: ScriptBlock) => {
+    const sequence = nextBlockNumber.current;
+    nextBlockNumber.current += 1;
+    const id = `block-local-${sequence}`;
+    const timestamp = `local-draft-${sequence}`;
+    const duplicate: ScriptBlock = {
+      ...block,
+      id,
+      position: 0,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    setBlocks((current) => {
+      const sourceIndex = current.findIndex((item) => item.id === block.id);
+      const insertIndex = sourceIndex >= 0 ? sourceIndex + 1 : current.length;
+      const nextBlocks = [...current];
+
+      nextBlocks.splice(insertIndex, 0, duplicate);
+
+      return resequenceBlocks(nextBlocks);
+    });
+
+    if (block.type === "scene") {
+      setSceneDrafts((current) => ({
+        ...current,
+        [id]: current[block.id] ?? getSceneDraft(block.text),
+      }));
+      setActiveScene(`scene-${id}`);
+    }
+    setActiveBlockId(id);
+    setPendingFocusBlockId(id);
+    setActiveTool(blockTypeToTool[block.type]);
+  };
+
+  const handleDeleteScriptBlock = (block: ScriptBlock) => {
+    const orderedBlocks = [...blocks].sort((a, b) => a.position - b.position);
+    const blockIndex = orderedBlocks.findIndex((item) => item.id === block.id);
+    const fallbackBlock =
+      orderedBlocks[blockIndex + 1] ?? orderedBlocks[blockIndex - 1] ?? null;
+
+    setBlocks((current) => resequenceBlocks(current.filter((item) => item.id !== block.id)));
+    setSceneDrafts((current) => {
+      const nextDrafts = { ...current };
+      delete nextDrafts[block.id];
+      return nextDrafts;
+    });
+
+    if (fallbackBlock) {
+      setActiveBlockId(fallbackBlock.id);
+      setPendingFocusBlockId(fallbackBlock.id);
+      if (fallbackBlock.type === "scene") {
+        setActiveScene(`scene-${fallbackBlock.id}`);
+      } else if (block.type === "scene") {
+        setActiveScene("");
+      }
+      setActiveTool(blockTypeToTool[fallbackBlock.type]);
+      return;
+    }
+
+    setActiveBlockId("");
+    setActiveScene("");
+  };
+
+  const withBlockMenu = (block: ScriptBlock, children: ReactNode) => (
+    <ContextMenu key={block.id}>
+      <ContextMenuTrigger className="select-text">{children}</ContextMenuTrigger>
+      <ContextMenuContent className="min-w-[178px] border-[#dfe4e1] bg-[#fcfdfc] text-[#252522]">
+        <ContextMenuGroup>
+          <ContextMenuLabel className="max-w-[220px] truncate">
+            {getBlockSummary(block)}
+          </ContextMenuLabel>
+        </ContextMenuGroup>
+        <ContextMenuItem onClick={() => focusBlockById(block.id)}>
+          <ExternalLink className="size-4" />
+          Open
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleDuplicateScriptBlock(block)}>
+          <Copy className="size-4" />
+          Duplicate
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          variant="destructive"
+          onClick={() => handleDeleteScriptBlock(block)}
+        >
+          <Trash2 className="size-4" />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+
   const handleScenePartChange = (
     block: ScriptBlock,
     patch: Partial<SceneHeadingParts>,
@@ -520,12 +652,8 @@ export function ScriptForgeDemo() {
   const focusSourceBlock = (id: string) => {
     if (!id.startsWith("scene-")) return;
 
-    const blockId = id.slice("scene-".length);
-    setActivePage("Script");
-    setEditorTab("script");
     setActiveScene(id);
-    setActiveBlockId(blockId);
-    setPendingFocusBlockId(blockId);
+    focusBlockById(id.slice("scene-".length));
   };
 
   const handleWorkbenchAction = () => {
@@ -776,10 +904,11 @@ export function ScriptForgeDemo() {
                   {blocks.map((block, index) => {
                     if (block.type === "scene") {
                       const scene = sceneDrafts[block.id] ?? getSceneDraft(block.text);
+                      const sceneLocationId = `scene-location-${block.id}`;
 
-                      return (
+                      return withBlockMenu(
+                        block,
                         <div
-                          key={block.id}
                           className="mb-[15px] mt-1 flex min-h-[29px] items-center gap-2 font-mono text-[16px] uppercase leading-[1.8]"
                         >
                           <div className="flex overflow-hidden rounded-md border border-[#e1e5e2] bg-[#f8faf9]">
@@ -798,10 +927,15 @@ export function ScriptForgeDemo() {
                               </button>
                             ))}
                           </div>
+                          <label htmlFor={sceneLocationId} className="sr-only">
+                            Scene location
+                          </label>
                           <input
                             ref={(node) => {
                               blockInputRefs.current[block.id] = node;
                             }}
+                            id={sceneLocationId}
+                            name={sceneLocationId}
                             aria-label={`scene location block ${index + 1}`}
                             value={scene.locationName}
                             placeholder="LOCATION"
@@ -841,13 +975,20 @@ export function ScriptForgeDemo() {
 
                     if (block.type === "character") {
                       const listId = `character-options-${block.id}`;
+                      const characterFieldId = `character-${block.id}`;
 
-                      return (
-                        <div key={block.id} className="mb-1 mt-5">
+                      return withBlockMenu(
+                        block,
+                        <div className="mb-1 mt-5">
+                          <label htmlFor={characterFieldId} className="sr-only">
+                            Character name
+                          </label>
                           <input
                             ref={(node) => {
                               blockInputRefs.current[block.id] = node;
                             }}
+                            id={characterFieldId}
+                            name={characterFieldId}
                             aria-label={`character block ${index + 1}`}
                             list={listId}
                             value={block.text}
@@ -875,38 +1016,47 @@ export function ScriptForgeDemo() {
                       );
                     }
 
-                    return (
-                      <textarea
-                        key={block.id}
-                        ref={(node) => {
-                          blockInputRefs.current[block.id] = node;
-                          if (node) resizeBlockInput(node);
-                        }}
-                        aria-label={`${block.type} block ${index + 1}`}
-                        rows={1}
-                        value={block.text}
-                        placeholder={getDefaultBlockText(blockTypeToTool[block.type])}
-                        spellCheck={false}
-                        onFocus={() => {
-                          setActiveBlockId(block.id);
-                          setActiveTool(blockTypeToTool[block.type]);
-                        }}
-                        onChange={(event) => {
-                          handleUpdateScriptBlock(block.id, event.target.value);
-                          resizeBlockInput(event.target);
-                        }}
-                        onInput={(event) => resizeBlockInput(event.currentTarget)}
-                        onKeyDown={(event) => handleBlockKeyDown(block, event)}
-                        className={cn(
-                          "block w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[16px] leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]",
-                          "mb-[15px] whitespace-pre-wrap",
-                          block.type === "paren" &&
-                            "m-0 text-center italic text-[#74746f]",
-                          block.type === "dialogue" &&
-                            "mx-auto max-w-[470px]",
-                          block.type === "transition" && "mb-5",
-                        )}
-                      />
+                    const blockFieldId = `${block.type}-${block.id}`;
+
+                    return withBlockMenu(
+                      block,
+                      <>
+                        <label htmlFor={blockFieldId} className="sr-only">
+                          {getBlockLabel(block.type)}
+                        </label>
+                        <textarea
+                          ref={(node) => {
+                            blockInputRefs.current[block.id] = node;
+                            if (node) resizeBlockInput(node);
+                          }}
+                          id={blockFieldId}
+                          name={blockFieldId}
+                          aria-label={`${block.type} block ${index + 1}`}
+                          rows={1}
+                          value={block.text}
+                          placeholder={getDefaultBlockText(blockTypeToTool[block.type])}
+                          spellCheck={false}
+                          onFocus={() => {
+                            setActiveBlockId(block.id);
+                            setActiveTool(blockTypeToTool[block.type]);
+                          }}
+                          onChange={(event) => {
+                            handleUpdateScriptBlock(block.id, event.target.value);
+                            resizeBlockInput(event.target);
+                          }}
+                          onInput={(event) => resizeBlockInput(event.currentTarget)}
+                          onKeyDown={(event) => handleBlockKeyDown(block, event)}
+                          className={cn(
+                            "block w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[16px] leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]",
+                            "mb-[15px] whitespace-pre-wrap",
+                            block.type === "paren" &&
+                              "m-0 text-center italic text-[#74746f]",
+                            block.type === "dialogue" &&
+                              "mx-auto max-w-[470px]",
+                            block.type === "transition" && "mb-5",
+                          )}
+                        />
+                      </>
                     );
                   })}
                 </div>

@@ -30,6 +30,7 @@ M1. Local functional workspace
 - Added structured Scene canvas controls for `INT./EXT.`, location, and `DAY/NIGHT`.
 - Added Character canvas inputs with derived character suggestions.
 - Added Script/Scenes sidebar scene click focus back to the source scene block.
+- Added shadcn `context-menu` and block right-click actions: `Open`, `Duplicate`, and `Delete`.
 
 ## In Progress
 
@@ -44,7 +45,7 @@ M1. Local functional workspace
      - implemented with native datalist; still needs richer selector popover if required
    - Enter-key next-block flow: Scene -> Action, Character -> Dialogue, Dialogue -> Character/Action
    - left scene item click focuses or scrolls to the source scene block
-2. Add script block edit/delete and context menu actions.
+2. Add explicit inline edit affordances if needed; source text editing and right-click duplicate/delete are implemented.
 3. Add deterministic domain/UI tests for insertion, editing, deletion, and derived entity sync.
 4. Implement manual modules: Beats, Props, Assets mock tasks, Storyboard locked state.
 5. Add local project creation/deletion flow.
@@ -70,6 +71,10 @@ M1. Local functional workspace
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
   - Browser smoke test succeeded: inserted a Scene, selected `EXT` and `NIGHT`, typed `desert road`, verified left scene item became `EXT DESERT ROAD - NIGHT`, then inserted `qa bot` as a Character and verified Characters list/card showed `QA BOT`; no console warning/error.
+- After adding block context menu actions:
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
+  - Browser smoke test succeeded: right-clicked a Scene block, verified `Open`, `Duplicate`, and `Delete` menu items, duplicated the scene and saw scene count/list increase to 2, deleted the duplicate and saw scene count/list return to 1; no console warning/error.
 
 ## Decisions
 

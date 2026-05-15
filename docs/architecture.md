@@ -99,6 +99,8 @@ Current UI behavior:
 - Character blocks render as editable create/select inputs backed by current derived character names.
 - Adding or editing a character block creates or reuses the derived character.
 - Adding dialogue after a character increases the derived character and scene dialogue counts.
+- Script blocks expose a right-click context menu with `Open`, `Duplicate`, and `Delete`.
+- Duplicate and Delete mutate the source block list, then derived Scenes, Characters, and Locations recalculate from the remaining ordered blocks.
 - Workbench pages receive derived cards instead of static mock cards.
 
 ### State
