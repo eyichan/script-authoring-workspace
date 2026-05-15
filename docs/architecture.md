@@ -121,6 +121,7 @@ Extracted workspace component:
 ```text
 src/components/workspace/collaboration-panel.tsx
 src/components/workspace/project-library.tsx
+src/components/workspace/script-editor-canvas.tsx
 ```
 
 This file should continue to be split as functionality grows:
