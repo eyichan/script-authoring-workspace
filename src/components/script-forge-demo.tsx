@@ -66,6 +66,13 @@ import {
   parseSceneHeading,
 } from "@/lib/domain/screenplay";
 import {
+  createProject,
+  getActiveProjects,
+  getTrashedProjects,
+  moveProjectToTrash,
+  restoreProject,
+} from "@/lib/domain/projects";
+import {
   deleteScriptBlock,
   duplicateScriptBlock,
   insertScriptBlockAfter,
@@ -77,6 +84,7 @@ import type {
   Beat,
   DerivedScene,
   Prop,
+  Project,
   SceneHeadingParts,
   ScriptBlock,
   ScriptBlockType,
@@ -87,6 +95,7 @@ type ExportFormat = "fdx" | "fountain" | "pdf";
 type EditorTab = "script" | "cover";
 type InspectorTab = "info" | "collab";
 type PaginationMode = "minimal" | "studio" | "fast";
+type WorkspaceMode = "workspace" | "projects";
 type PageName =
   | "Script"
   | "Beats"
@@ -253,6 +262,25 @@ const initialAdditions: Record<WorkbenchPageName, number> = {
   Assets: 0,
 };
 
+const seedProjects: Project[] = [
+  seedWorkspace.project,
+  {
+    id: "project-reference",
+    title: "Foreign Screenplay Study",
+    status: "active",
+    createdAt: "2026-05-15T00:20:00.000Z",
+    updatedAt: "2026-05-15T00:20:00.000Z",
+  },
+  {
+    id: "project-trash-sample",
+    title: "Deleted Treatment Sample",
+    status: "trashed",
+    createdAt: "2026-05-15T00:10:00.000Z",
+    updatedAt: "2026-05-15T00:30:00.000Z",
+    trashedAt: "2026-05-15T00:30:00.000Z",
+  },
+];
+
 const scenePrefixOptions = ["INT", "EXT"] as const;
 const sceneTimeOptions = ["DAY", "NIGHT"] as const;
 const localCreatedAt = "local-draft";
@@ -328,9 +356,13 @@ function getBlockSummary(block: ScriptBlock): string {
 }
 
 export function ScriptForgeDemo() {
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("workspace");
+  const [projects, setProjects] = useState<Project[]>(seedProjects);
+  const [activeProjectId, setActiveProjectId] = useState(seedWorkspace.project.id);
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
   const nextBlockNumber = useRef(seedWorkspace.blocks.length + 1);
+  const nextProjectNumber = useRef(seedProjects.length + 1);
   const nextBeatNumber = useRef(seedWorkspace.beats.length + 1);
   const nextPropNumber = useRef(seedWorkspace.props.length + 1);
   const nextAssetNumber = useRef(seedWorkspace.assetTasks.length + 1);
@@ -369,6 +401,10 @@ export function ScriptForgeDemo() {
   );
   const [generatedStills, setGeneratedStills] = useState<string[]>([]);
   const editorMode = activePage === "Script";
+  const activeProject =
+    projects.find((project) => project.id === activeProjectId) ?? seedWorkspace.project;
+  const activeProjects = useMemo(() => getActiveProjects(projects), [projects]);
+  const trashedProjects = useMemo(() => getTrashedProjects(projects), [projects]);
 
   useEffect(() => {
     if (!pendingFocusBlockId) return;
@@ -701,6 +737,51 @@ export function ScriptForgeDemo() {
     setWorkbenchMessage(`${nextAsset.title} imported into the asset library.`);
   };
 
+  const handleCreateProject = () => {
+    const sequence = nextProjectNumber.current;
+    nextProjectNumber.current += 1;
+    const timestamp = `${localCreatedAt}-project-${sequence}`;
+    const nextProject: Project = {
+      id: `project-local-${sequence}`,
+      title: `Untitled Script ${sequence}`,
+      status: "active",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    setProjects((current) => createProject(current, nextProject));
+    setActiveProjectId(nextProject.id);
+    setWorkspaceMode("workspace");
+    setActivePage("Script");
+    setEditorTab("script");
+  };
+
+  const handleOpenProject = (projectId: string) => {
+    setActiveProjectId(projectId);
+    setWorkspaceMode("workspace");
+    setActivePage("Script");
+    setEditorTab("script");
+  };
+
+  const handleTrashProject = (projectId: string) => {
+    const timestamp = `${localCreatedAt}-trash-${nextRevisionNumber.current++}`;
+    setProjects((current) => moveProjectToTrash(current, projectId, timestamp));
+    if (projectId === activeProjectId) {
+      const fallbackProject = activeProjects.find((project) => project.id !== projectId);
+      if (fallbackProject) {
+        setActiveProjectId(fallbackProject.id);
+        return;
+      }
+      setWorkspaceMode("projects");
+    }
+  };
+
+  const handleRestoreProject = (projectId: string) => {
+    const timestamp = `${localCreatedAt}-restore-${nextRevisionNumber.current++}`;
+    setProjects((current) => restoreProject(current, projectId, timestamp));
+    setActiveProjectId(projectId);
+  };
+
   const handleWorkbenchAction = () => {
     if (!isWorkbenchPage(activePage)) return;
 
@@ -731,7 +812,11 @@ export function ScriptForgeDemo() {
     <div className="h-screen overflow-hidden bg-[#f4f6f5] text-[#242421]">
       <header className="flex h-12 items-center justify-between px-3">
         <div className="flex items-center gap-4">
-            <IconChrome label="Home" icon={Home} />
+            <IconChrome
+              label="Home"
+              icon={Home}
+              onClick={() => setWorkspaceMode("projects")}
+            />
             <IconChrome label="Outline" icon={Columns2} />
         </div>
         <Button
@@ -743,13 +828,25 @@ export function ScriptForgeDemo() {
         </Button>
       </header>
 
+      {workspaceMode === "projects" ? (
+        <ProjectLibrary
+          activeProjectId={activeProjectId}
+          activeProjects={activeProjects}
+          trashedProjects={trashedProjects}
+          onCreateProject={handleCreateProject}
+          onOpenProject={handleOpenProject}
+          onTrashProject={handleTrashProject}
+          onRestoreProject={handleRestoreProject}
+        />
+      ) : (
       <div className="flex h-[calc(100%-48px)] min-h-0 gap-2 px-2 pb-2 max-[900px]:overflow-auto">
         <aside className="flex min-h-0 w-[230px] shrink-0 flex-col pb-0 pt-4 max-[900px]:hidden">
           <Button
             variant="secondary"
+            onClick={() => setWorkspaceMode("projects")}
             className="ml-4 h-[30px] w-[112px] justify-between rounded-lg bg-[#e4e8e6] px-2.5 text-[13px] font-normal text-[#171a19] shadow-none transition-colors duration-300 hover:bg-[#dde2df] active:translate-y-0 max-[1180px]:hidden"
           >
-            sample
+            <span className="truncate">{activeProject.title}</span>
             <ChevronDown data-icon="inline-end" />
           </Button>
 
@@ -1298,21 +1395,214 @@ export function ScriptForgeDemo() {
         ) : null}
         </div>
       </div>
+      )}
     </div>
+  );
+}
+
+function ProjectLibrary({
+  activeProjectId,
+  activeProjects,
+  trashedProjects,
+  onCreateProject,
+  onOpenProject,
+  onTrashProject,
+  onRestoreProject,
+}: {
+  activeProjectId: string;
+  activeProjects: Project[];
+  trashedProjects: Project[];
+  onCreateProject: () => void;
+  onOpenProject: (projectId: string) => void;
+  onTrashProject: (projectId: string) => void;
+  onRestoreProject: (projectId: string) => void;
+}) {
+  return (
+    <div className="h-[calc(100%-48px)] min-h-0 px-2 pb-2">
+      <section className="grid h-full min-h-0 grid-rows-[56px_1fr] overflow-hidden rounded-[24px] border border-[#ddddda] bg-[#fcfdfc] shadow-sm">
+        <header className="flex items-center justify-between border-b border-[#ebebe7] px-5">
+          <div>
+            <h1 className="text-[16px] font-normal text-[#242421]">Recents</h1>
+            <p className="text-[12px] text-[#7d837f]">
+              Local project lifecycle before database persistence.
+            </p>
+          </div>
+          <Button
+            className="h-8 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0"
+            onClick={onCreateProject}
+          >
+            <Plus className="size-[14px]" data-icon="inline-start" />
+            New Project
+          </Button>
+        </header>
+
+        <ScrollArea className="min-h-0 bg-[radial-gradient(rgb(188_194_187/0.38)_1px,transparent_1px)] [background-size:30px_30px]">
+          <div className="mx-auto grid max-w-[1120px] gap-6 px-6 py-6">
+            <section>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[14px] font-medium text-[#6f7772]">Active Projects</h2>
+                <Badge variant="secondary">{activeProjects.length}</Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-4 max-[1100px]:grid-cols-2 max-[760px]:grid-cols-1">
+                {activeProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    active={project.id === activeProjectId}
+                    statusLabel={project.id === activeProjectId ? "Open now" : "Active"}
+                    onOpen={() => onOpenProject(project.id)}
+                    onTrash={() => onTrashProject(project.id)}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[14px] font-medium text-[#6f7772]">Trash</h2>
+                <Badge variant="secondary">{trashedProjects.length}</Badge>
+              </div>
+              {trashedProjects.length ? (
+                <div className="grid grid-cols-3 gap-4 max-[1100px]:grid-cols-2 max-[760px]:grid-cols-1">
+                  {trashedProjects.map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      active={false}
+                      statusLabel="In Trash"
+                      onRestore={() => onRestoreProject(project.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-[#cfd8d2] bg-[#f8faf8] p-4 text-[13px] text-[#6f7772]">
+                  Trash is empty.
+                </div>
+              )}
+            </section>
+          </div>
+        </ScrollArea>
+      </section>
+    </div>
+  );
+}
+
+function ProjectCard({
+  project,
+  active,
+  statusLabel,
+  onOpen,
+  onTrash,
+  onRestore,
+}: {
+  project: Project;
+  active: boolean;
+  statusLabel: string;
+  onOpen?: () => void;
+  onTrash?: () => void;
+  onRestore?: () => void;
+}) {
+  const card = (
+    <div
+      className={cn(
+        "min-h-[160px] rounded-xl border border-[#deded8] bg-[#fcfdfc] p-4 shadow-[0_8px_24px_rgb(42_42_37/0.07)]",
+        active && "border-[#b8d2bf] bg-[#f6fbf7]",
+      )}
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <div className="grid size-9 place-items-center rounded-lg bg-[#eef3ef] text-[#2e6248]">
+          <FileText className="size-5" />
+        </div>
+        <Badge variant="secondary">{statusLabel}</Badge>
+      </div>
+      <h3 className="truncate text-[16px] font-medium leading-6">{project.title}</h3>
+      <p className="mt-2 text-[13px] leading-5 text-[#777771]">
+        Updated {project.updatedAt}
+      </p>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {onOpen ? (
+          <Button
+            variant="secondary"
+            className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+            onClick={onOpen}
+          >
+            <ExternalLink className="size-[14px]" data-icon="inline-start" />
+            Open
+          </Button>
+        ) : null}
+        {onTrash ? (
+          <Button
+            variant="secondary"
+            className="h-8 rounded-full border border-[#efd2d2] bg-[#fffafa] px-3 text-[12px] font-medium text-[#a04444] shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:bg-[#fff5f5] active:translate-y-0"
+            onClick={onTrash}
+          >
+            <Trash2 className="size-[14px]" data-icon="inline-start" />
+            Delete
+          </Button>
+        ) : null}
+        {onRestore ? (
+          <Button
+            variant="secondary"
+            className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+            onClick={onRestore}
+          >
+            <RefreshCcw className="size-[14px]" data-icon="inline-start" />
+            Restore
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="block">{card}</ContextMenuTrigger>
+      <ContextMenuContent className="min-w-[178px] border-[#dfe4e1] bg-[#fcfdfc] text-[#252522]">
+        <ContextMenuGroup>
+          <ContextMenuLabel className="max-w-[220px] truncate">
+            {project.title}
+          </ContextMenuLabel>
+        </ContextMenuGroup>
+        {onOpen ? (
+          <ContextMenuItem onClick={onOpen}>
+            <ExternalLink className="size-4" />
+            Open
+          </ContextMenuItem>
+        ) : null}
+        {onRestore ? (
+          <ContextMenuItem onClick={onRestore}>
+            <RefreshCcw className="size-4" />
+            Restore
+          </ContextMenuItem>
+        ) : null}
+        {onTrash ? (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive" onClick={onTrash}>
+              <Trash2 className="size-4" />
+              Delete to Trash
+            </ContextMenuItem>
+          </>
+        ) : null}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
 function IconChrome({
   label,
   icon: Icon,
+  onClick,
 }: {
   label: string;
   icon: ComponentType<{ className?: string }>;
+  onClick?: () => void;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger
         aria-label={label}
+        onClick={onClick}
         className="inline-flex size-8 items-center justify-center rounded-lg bg-transparent hover:bg-[#e9e9e5]"
       >
         <Icon className="size-[18px]" />

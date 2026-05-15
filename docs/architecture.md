@@ -41,6 +41,7 @@ Current files:
 src/lib/domain/types.ts
 src/lib/domain/screenplay.ts
 src/lib/domain/script-blocks.ts
+src/lib/domain/projects.ts
 src/lib/domain/seed.ts
 ```
 
@@ -49,6 +50,7 @@ Current domain behavior:
 - `parseSceneHeading` parses `INT./EXT.` style headings into prefix, location, and time of day.
 - `deriveScriptEntities` derives scenes, characters, locations, character references, scene dialogue counts, and location character references from ordered script blocks.
 - `script-blocks.ts` owns pure insert, update, duplicate, delete, and position resequencing operations for script blocks.
+- `projects.ts` owns pure local project creation, trash, restore, and active/trashed filtering operations.
 - `seedWorkspace` provides a deterministic local workspace for the first functional integration pass.
 
 ### Persistence
@@ -108,6 +110,8 @@ Current UI behavior:
 - Props is a manual production-memory page; `New Prop` creates local `Prop` records instead of mock counters.
 - Assets is a generated/imported task page; `Import` creates local `AssetTask` records and supports still/video tab filtering by title.
 - Storyboard remains a locked module and reuses the unavailable-module visual pattern.
+- Home opens a local Recents project library with Active and Trash sections.
+- Projects support local create, open, delete-to-trash, restore, and right-click project actions.
 
 ### State
 
@@ -147,6 +151,15 @@ User action
   -> render Sidebar / Script / Scenes / Characters / Locations
 ```
 
+Local project lifecycle flow:
+
+```text
+Home / project selector
+  -> Recents project library
+  -> create/open/delete-to-trash/restore Project in React state
+  -> selected Project title updates workspace shell
+```
+
 Implemented local flow:
 
 ```text
@@ -182,7 +195,7 @@ Functional:
 
 - browser smoke tests for authoring workflow
 - derived entity assertions, either unit tests or deterministic script checks
-- current deterministic tests live in `src/lib/domain/screenplay.test.ts` and cover scene heading parsing, block insertion, text editing, duplicate/delete, empty scene rows, and derived scene/character/location sync.
+- current deterministic tests live in `src/lib/domain/*.test.ts` and cover scene heading parsing, block insertion, text editing, duplicate/delete, empty scene rows, derived scene/character/location sync, and project lifecycle trash/restore behavior.
 
 Persistence:
 
