@@ -318,6 +318,7 @@ Functional:
 - current E2E tests live in `tests/e2e/*.spec.ts` and run against a production `next start` server on port `3100`.
 - export formatter tests cover ordered Fountain text, Final Draft XML escaping, and generated package metadata.
 - E2E tests assert pressing Enter commits the current unblurred script line before inserting the next block.
+- E2E tests assert the Character -> Dialogue -> Character writing sequence persists ordered blocks and updates the Characters page from derived script state.
 
 Persistence:
 

@@ -147,6 +147,43 @@ test("commits the current script line before Enter inserts the next block", asyn
     ]);
 });
 
+test("persists character and dialogue authoring flow", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+  await expect(page.getByLabel("Project title")).toHaveValue(/Untitled Script/);
+
+  await page.locator("button").filter({ hasText: /^Character$/ }).last().click({
+    force: true,
+  });
+  await page.getByLabel(/character block 1/i).fill("Ada Lovelace");
+  await page.getByLabel(/character block 1/i).press("Enter");
+
+  const dialogueInput = page.getByRole("textbox", { name: /dialogue block 2/i });
+  await expect(dialogueInput).toBeFocused();
+  await dialogueInput.fill("The engine has a memory.");
+  await dialogueInput.press("Enter");
+
+  await expect
+    .poll(async () => {
+      const project = await latestActiveProject();
+      return project.scripts[0]?.blocks.map((block) => ({
+        position: block.position,
+        text: block.text,
+        type: block.type,
+      }));
+    })
+    .toEqual([
+      { position: 1, text: "ADA LOVELACE", type: "character" },
+      { position: 2, text: "The engine has a memory.", type: "dialogue" },
+      { position: 3, text: "", type: "character" },
+    ]);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Characters" }).click({ force: true });
+  await expect(page.getByRole("button", { name: /ADA LOVELACE/ })).toBeVisible();
+});
+
 test("persists script blocks and workbench records across refresh", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Home").click();
@@ -319,6 +356,11 @@ test("manages persisted invite links and reviewer state", async ({ page }) => {
   await expect(page.getByText("Reviewer 2").first()).toBeVisible();
 
   await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page
+    .getByTestId(`project-card-${created.id}`)
+    .getByRole("button", { name: "Open" })
+    .click({ force: true });
   await page.getByRole("tab", { name: "Collaboration" }).click();
   await page.getByRole("button", { name: "Remove Reviewer 2" }).click({
     force: true,

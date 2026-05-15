@@ -53,6 +53,7 @@ M5. Product verification and hardening
 - Added persisted project rename that keeps the first script title in sync.
 - Added persisted title edit flows for Beat, Prop, and Asset workbench records.
 - Added persisted collaboration management for reviewer removal and share-link revocation.
+- Added E2E coverage for Character -> Dialogue -> Character screenplay authoring.
 
 ## In Progress
 
@@ -203,6 +204,13 @@ M5. Product verification and hardening
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including Invite, share page access, reviewer removal, share revocation, and 404 verification for the revoked share token.
+- After adding Character / Dialogue E2E coverage:
+  - Added a Playwright flow that inserts a Character block, presses Enter into Dialogue, writes a dialogue line, presses Enter into the next Character block, verifies ordered Postgres `ScriptBlock` rows, refreshes, and verifies the Characters page renders `ADA LOVELACE`.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed.
+  - Initial selector used `getByRole("textbox")` for the Character input, but the input has a `datalist` and is exposed as a combobox. The test now uses its accessible label instead.
 
 ## Decisions
 
