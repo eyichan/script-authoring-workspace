@@ -201,6 +201,10 @@ test("creates a persisted invite link and reviewer state", async ({ page }) => {
   const created = await latestActiveProject();
   expect(created.collaborators).toHaveLength(1);
 
+  await page.getByRole("button", { name: "Scene", exact: true }).click({ force: true });
+  await page.getByRole("textbox", { name: /scene location block 1/i }).fill("share room");
+  await expect(page.getByRole("button", { name: /INT SHARE ROOM - DAY/ })).toBeVisible();
+
   await page.getByRole("button", { name: "Invite" }).click({ force: true });
   await expect(page.getByText("Share link")).toBeVisible();
   await expect(page.getByText(/\/share\//).first()).toBeVisible();
@@ -215,4 +219,9 @@ test("creates a persisted invite link and reviewer state", async ({ page }) => {
   expect(invited.collaborators).toHaveLength(2);
   expect(invited.collaborators.some((collaborator) => collaborator.status === "Invited"))
     .toBe(true);
+
+  await page.goto(`/share/${invited.share?.token}`);
+  await expect(page.getByText("Read-only review link")).toBeVisible();
+  await expect(page.getByText("INT. SHARE ROOM - DAY").first()).toBeVisible();
+  await expect(page.getByText("Reviewer 2").first()).toBeVisible();
 });

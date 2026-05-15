@@ -152,6 +152,14 @@ M2. Persistence foundation
   - `npm test`: succeeded, 9 tests passed.
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
+- After adding the read-only share route:
+  - `src/app/share/[token]/page.tsx` renders a server-side read-only review page from the persisted `ProjectShare` token.
+  - `getSharedWorkspaceByToken` reuses the existing workspace mapper so the share route reads the same Project, ScriptBlock, derived scene, and collaborator state as the main workspace.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npx prisma migrate status`: succeeded after injecting `DATABASE_URL` from `.env.local`; database schema is up to date with 2 migrations.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 4 Playwright tests passed, including Invite creating `INT. SHARE ROOM - DAY`, opening the generated `/share/<token>` route, and verifying the read-only page renders the shared scene and `Reviewer 2`.
 
 ## Decisions
 

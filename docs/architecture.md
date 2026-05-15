@@ -251,6 +251,8 @@ Invite click
   -> Prisma upsert ProjectShare and create ProjectCollaborator
   -> return WorkspaceSnapshot plus status message
   -> client refreshes Collaboration panel and collaborator count
+  -> /share/<token> server route reads ProjectShare
+  -> render read-only script, scenes, review stats, and collaborator state
 ```
 
 ## Verification Gates
@@ -281,6 +283,7 @@ Persistence:
 - refresh preserves data
 - E2E tests assert Postgres rows after browser interactions
 - E2E tests assert invite link and collaborator rows after browser interactions
+- E2E tests open the generated `/share/<token>` route and assert shared script content and reviewer state render from persisted records
 
 ## Open Risks
 

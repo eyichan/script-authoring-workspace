@@ -306,6 +306,25 @@ export async function getWorkspaceByProjectId(projectId: string): Promise<Worksp
   return getWorkspaceSnapshot(projectId);
 }
 
+export async function getSharedWorkspaceByToken(
+  token: string,
+): Promise<WorkspaceView | null> {
+  const share = await prisma.projectShare.findUnique({
+    where: { token },
+    include: {
+      project: {
+        include: projectInclude,
+      },
+    },
+  });
+
+  if (!share) {
+    return null;
+  }
+
+  return mapWorkspace(share.project);
+}
+
 export async function createProjectSnapshot(): Promise<WorkspaceSnapshot> {
   const count = await prisma.project.count();
   const projectId = await createWorkspaceProject(`Untitled Script ${count + 1}`);
