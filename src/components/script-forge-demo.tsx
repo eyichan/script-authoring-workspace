@@ -48,9 +48,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { deriveScriptEntities } from "@/lib/domain/screenplay";
+import {
+  deriveScriptEntities,
+  formatSceneHeading,
+  parseSceneHeading,
+} from "@/lib/domain/screenplay";
 import { seedWorkspace } from "@/lib/domain/seed";
-import type { DerivedScene, ScriptBlock, ScriptBlockType } from "@/lib/domain/types";
+import type {
+  DerivedScene,
+  SceneHeadingParts,
+  ScriptBlock,
+  ScriptBlockType,
+} from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
 type ExportFormat = "fdx" | "fountain" | "pdf";
@@ -67,6 +76,7 @@ type PageName =
   | "Scenes"
   | "Assets";
 type WorkbenchPageName = Exclude<PageName, "Script" | "Beats" | "Storyboard">;
+type BlockInputElement = HTMLInputElement | HTMLTextAreaElement;
 
 const navItems = [
   { label: "Script", icon: FileText },
@@ -222,6 +232,9 @@ const initialAdditions: Record<WorkbenchPageName, number> = {
   Assets: 0,
 };
 
+const scenePrefixOptions = ["INT", "EXT"] as const;
+const sceneTimeOptions = ["DAY", "NIGHT"] as const;
+
 function isWorkbenchPage(page: PageName): page is WorkbenchPageName {
   return page !== "Script" && page !== "Beats" && page !== "Storyboard";
 }
@@ -260,12 +273,33 @@ function resizeBlockInput(input: HTMLTextAreaElement) {
   input.style.height = `${Math.max(input.scrollHeight, 29)}px`;
 }
 
+function getSceneDraft(text: string): SceneHeadingParts {
+  const parsed = parseSceneHeading(text);
+
+  return {
+    prefix: parsed?.prefix === "EXT" ? "EXT" : "INT",
+    locationName: parsed?.locationName ?? "",
+    timeOfDay: parsed?.timeOfDay ?? "DAY",
+  };
+}
+
+function buildSceneHeading(parts: SceneHeadingParts): string {
+  const locationName = parts.locationName.trim().replace(/\s+/g, " ").toUpperCase();
+  if (!locationName) return "";
+
+  return formatSceneHeading({
+    prefix: parts.prefix,
+    locationName,
+    timeOfDay: parts.timeOfDay.trim().replace(/\s+/g, " ").toUpperCase() || "DAY",
+  });
+}
+
 export function ScriptForgeDemo() {
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
   const nextBlockNumber = useRef(seedWorkspace.blocks.length + 1);
   const nextRevisionNumber = useRef(1);
-  const blockInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const blockInputRefs = useRef<Record<string, BlockInputElement | null>>({});
   const [beats] = useState(seedWorkspace.beats);
   const [props] = useState(seedWorkspace.props);
   const [assetTasks] = useState(seedWorkspace.assetTasks);
@@ -282,6 +316,7 @@ export function ScriptForgeDemo() {
     seedWorkspace.blocks.at(-1)?.id ?? "",
   );
   const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
+  const [sceneDrafts, setSceneDrafts] = useState<Record<string, SceneHeadingParts>>({});
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("info");
   const [paginationMode, setPaginationMode] = useState<PaginationMode>("minimal");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("fdx");
@@ -307,7 +342,9 @@ export function ScriptForgeDemo() {
 
     input.focus();
     input.select();
-    resizeBlockInput(input);
+    if (input instanceof HTMLTextAreaElement) {
+      resizeBlockInput(input);
+    }
     setPendingFocusBlockId(null);
   }, [blocks, pendingFocusBlockId]);
 
@@ -452,12 +489,43 @@ export function ScriptForgeDemo() {
 
   const handleBlockKeyDown = (
     block: ScriptBlock,
-    event: KeyboardEvent<HTMLTextAreaElement>,
+    event: KeyboardEvent<BlockInputElement>,
   ) => {
     if (event.key !== "Enter" || event.shiftKey) return;
 
     event.preventDefault();
     handleInsertScriptBlock(nextToolByBlockType[block.type], block.id);
+  };
+
+  const handleScenePartChange = (
+    block: ScriptBlock,
+    patch: Partial<SceneHeadingParts>,
+  ) => {
+    const nextScene = {
+      ...(sceneDrafts[block.id] ?? getSceneDraft(block.text)),
+      ...patch,
+    };
+    const nextText = buildSceneHeading(nextScene);
+
+    setSceneDrafts((current) => ({
+      ...current,
+      [block.id]: nextScene,
+    }));
+    handleUpdateScriptBlock(block.id, nextText);
+    if (nextText) {
+      setActiveScene(`scene-${block.id}`);
+    }
+  };
+
+  const focusSourceBlock = (id: string) => {
+    if (!id.startsWith("scene-")) return;
+
+    const blockId = id.slice("scene-".length);
+    setActivePage("Script");
+    setEditorTab("script");
+    setActiveScene(id);
+    setActiveBlockId(blockId);
+    setPendingFocusBlockId(blockId);
   };
 
   const handleWorkbenchAction = () => {
@@ -541,7 +609,14 @@ export function ScriptForgeDemo() {
               {sidebarItems.map((scene) => (
                 <button
                   key={scene.id}
-                  onClick={() => setActiveScene(scene.id)}
+                  onClick={() => {
+                    if (activePage === "Script" || activePage === "Scenes") {
+                      focusSourceBlock(scene.id);
+                      return;
+                    }
+
+                    setActiveScene(scene.id);
+                  }}
                   className={cn(
                     "flex h-[42px] w-[214px] items-center justify-between rounded-xl border border-[#e4e8e6] bg-[#fcfdfc] px-2.5 text-left text-[13px] font-normal text-[#55554f] shadow-[0_2px_4px_rgb(0_0_0/0.05),0_1px_2px_-1px_rgb(0_0_0/0.05)] transition-[background-color,border-color,box-shadow,color] duration-150 hover:bg-[#f8faf9]",
                     activeScene === scene.id &&
@@ -698,45 +773,142 @@ export function ScriptForgeDemo() {
 
               <article className="script-paper mx-auto mt-[-20px] min-h-[1210px] w-[min(816px,100%)] overflow-hidden">
                 <div className="mx-auto max-w-[576px] px-0 pb-36 pt-[104px] font-mono text-[16px] leading-[1.8] max-[900px]:max-w-[86%] max-[900px]:pt-20 max-[900px]:text-[13px]">
-                  {blocks.map((block, index) => (
-                    <textarea
-                      key={block.id}
-                      ref={(node) => {
-                        blockInputRefs.current[block.id] = node;
-                        if (node) resizeBlockInput(node);
-                      }}
-                      aria-label={`${block.type} block ${index + 1}`}
-                      rows={1}
-                      value={block.text}
-                      placeholder={getDefaultBlockText(blockTypeToTool[block.type])}
-                      spellCheck={false}
-                      onFocus={() => {
-                        setActiveBlockId(block.id);
-                        setActiveTool(blockTypeToTool[block.type]);
-                      }}
-                      onChange={(event) => {
-                        handleUpdateScriptBlock(block.id, event.target.value);
-                        if (block.type === "scene" && event.target.value.trim()) {
-                          setActiveScene(`scene-${block.id}`);
-                        }
-                        resizeBlockInput(event.target);
-                      }}
-                      onInput={(event) => resizeBlockInput(event.currentTarget)}
-                      onKeyDown={(event) => handleBlockKeyDown(block, event)}
-                      className={cn(
-                        "block w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[16px] leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]",
-                        "mb-[15px] whitespace-pre-wrap",
-                        block.type === "scene" && "mt-1 uppercase",
-                        block.type === "character" &&
-                          "mb-1 mt-5 text-center uppercase",
-                        block.type === "paren" &&
-                          "m-0 text-center italic text-[#74746f]",
-                        block.type === "dialogue" &&
-                          "mx-auto max-w-[470px]",
-                        block.type === "transition" && "mb-5",
-                      )}
-                    />
-                  ))}
+                  {blocks.map((block, index) => {
+                    if (block.type === "scene") {
+                      const scene = sceneDrafts[block.id] ?? getSceneDraft(block.text);
+
+                      return (
+                        <div
+                          key={block.id}
+                          className="mb-[15px] mt-1 flex min-h-[29px] items-center gap-2 font-mono text-[16px] uppercase leading-[1.8]"
+                        >
+                          <div className="flex overflow-hidden rounded-md border border-[#e1e5e2] bg-[#f8faf9]">
+                            {scenePrefixOptions.map((prefix) => (
+                              <button
+                                key={prefix}
+                                type="button"
+                                onClick={() => handleScenePartChange(block, { prefix })}
+                                className={cn(
+                                  "h-7 px-2 text-[13px] text-[#747c78] transition-colors hover:bg-white",
+                                  scene.prefix === prefix &&
+                                    "bg-white text-[#171a19] shadow-[inset_0_0_0_1px_rgb(46_98_72/0.16)]",
+                                )}
+                              >
+                                {prefix}.
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            ref={(node) => {
+                              blockInputRefs.current[block.id] = node;
+                            }}
+                            aria-label={`scene location block ${index + 1}`}
+                            value={scene.locationName}
+                            placeholder="LOCATION"
+                            spellCheck={false}
+                            onFocus={() => {
+                              setActiveBlockId(block.id);
+                              setActiveTool("Scene");
+                            }}
+                            onChange={(event) =>
+                              handleScenePartChange(block, {
+                                locationName: event.target.value,
+                              })
+                            }
+                            onKeyDown={(event) => handleBlockKeyDown(block, event)}
+                            className="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
+                          />
+                          <span className="text-[#a0a6a2]">-</span>
+                          <div className="flex overflow-hidden rounded-md border border-[#e1e5e2] bg-[#f8faf9]">
+                            {sceneTimeOptions.map((timeOfDay) => (
+                              <button
+                                key={timeOfDay}
+                                type="button"
+                                onClick={() => handleScenePartChange(block, { timeOfDay })}
+                                className={cn(
+                                  "h-7 px-2 text-[13px] text-[#747c78] transition-colors hover:bg-white",
+                                  scene.timeOfDay === timeOfDay &&
+                                    "bg-white text-[#171a19] shadow-[inset_0_0_0_1px_rgb(46_98_72/0.16)]",
+                                )}
+                              >
+                                {timeOfDay}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (block.type === "character") {
+                      const listId = `character-options-${block.id}`;
+
+                      return (
+                        <div key={block.id} className="mb-1 mt-5">
+                          <input
+                            ref={(node) => {
+                              blockInputRefs.current[block.id] = node;
+                            }}
+                            aria-label={`character block ${index + 1}`}
+                            list={listId}
+                            value={block.text}
+                            placeholder={getDefaultBlockText("Character")}
+                            spellCheck={false}
+                            onFocus={() => {
+                              setActiveBlockId(block.id);
+                              setActiveTool("Character");
+                            }}
+                            onChange={(event) =>
+                              handleUpdateScriptBlock(block.id, event.target.value)
+                            }
+                            onKeyDown={(event) => handleBlockKeyDown(block, event)}
+                            className="block w-full border-0 bg-transparent p-0 text-center font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
+                          />
+                          <datalist id={listId}>
+                            {derived.characters.map((character) => (
+                              <option
+                                key={character.id}
+                                value={character.displayName}
+                              />
+                            ))}
+                          </datalist>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <textarea
+                        key={block.id}
+                        ref={(node) => {
+                          blockInputRefs.current[block.id] = node;
+                          if (node) resizeBlockInput(node);
+                        }}
+                        aria-label={`${block.type} block ${index + 1}`}
+                        rows={1}
+                        value={block.text}
+                        placeholder={getDefaultBlockText(blockTypeToTool[block.type])}
+                        spellCheck={false}
+                        onFocus={() => {
+                          setActiveBlockId(block.id);
+                          setActiveTool(blockTypeToTool[block.type]);
+                        }}
+                        onChange={(event) => {
+                          handleUpdateScriptBlock(block.id, event.target.value);
+                          resizeBlockInput(event.target);
+                        }}
+                        onInput={(event) => resizeBlockInput(event.currentTarget)}
+                        onKeyDown={(event) => handleBlockKeyDown(block, event)}
+                        className={cn(
+                          "block w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[16px] leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]",
+                          "mb-[15px] whitespace-pre-wrap",
+                          block.type === "paren" &&
+                            "m-0 text-center italic text-[#74746f]",
+                          block.type === "dialogue" &&
+                            "mx-auto max-w-[470px]",
+                          block.type === "transition" && "mb-5",
+                        )}
+                      />
+                    );
+                  })}
                 </div>
               </article>
             </div>

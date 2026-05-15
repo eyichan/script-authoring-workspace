@@ -93,9 +93,11 @@ Current UI behavior:
 - The Script page renders ordered `ScriptBlock` records instead of static screenplay lines.
 - The floating script toolbar directly appends an editable screenplay block to the script canvas.
 - Script block textarea edits update the source block text in local state.
-- Adding a scene block creates a derived scene and makes it the active sidebar scene.
+- Scene blocks render as structured canvas controls for `INT./EXT.`, location input, and `DAY/NIGHT`.
+- Adding a valid scene block creates a derived scene and makes it the active sidebar scene.
 - Empty or invalid scene selector rows do not create placeholder scene/location entities.
-- Adding a character block creates or reuses the derived character.
+- Character blocks render as editable create/select inputs backed by current derived character names.
+- Adding or editing a character block creates or reuses the derived character.
 - Adding dialogue after a character increases the derived character and scene dialogue counts.
 - Workbench pages receive derived cards instead of static mock cards.
 
@@ -143,7 +145,7 @@ Implemented local flow:
 Floating toolbar click
   -> append editable ScriptBlock in React state
   -> focus inserted canvas block
-  -> user edits source text
+  -> user edits source text or structured scene/character controls
   -> deriveScriptEntities(scriptId, blocks)
   -> update Script / Sidebar / Statistics / Workbench pages
 ```

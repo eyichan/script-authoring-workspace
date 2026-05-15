@@ -27,6 +27,9 @@ M1. Local functional workspace
 - Replaced fixed inserted text with editable canvas blocks that focus immediately after toolbar insertion.
 - Fixed derived scene sync so empty scene selector rows no longer create `UNTITLED LOCATION` entities.
 - Added reference route and workbench ownership notes in `docs/reference-workbench-routes.md`.
+- Added structured Scene canvas controls for `INT./EXT.`, location, and `DAY/NIGHT`.
+- Added Character canvas inputs with derived character suggestions.
+- Added Script/Scenes sidebar scene click focus back to the source scene block.
 
 ## In Progress
 
@@ -36,7 +39,9 @@ M1. Local functional workspace
 
 1. Finish the local Script editor before database work:
    - structured Scene block with `INT./EXT.`, `LOCATION`, and `DAY/NIGHT` controls
+     - implemented; still needs closer selector popover styling if required
    - structured Character block with create/select behavior
+     - implemented with native datalist; still needs richer selector popover if required
    - Enter-key next-block flow: Scene -> Action, Character -> Dialogue, Dialogue -> Character/Action
    - left scene item click focuses or scrolls to the source scene block
 2. Add script block edit/delete and context menu actions.
@@ -61,6 +66,10 @@ M1. Local functional workspace
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
   - Browser smoke test succeeded: clicked `Scene`, typed `EXT. TEST RANGE - NIGHT` in the canvas block, verified left Scenes and Scene Board count/card updated to 2, and confirmed no console warning/error.
+- After adding structured Scene and Character blocks:
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
+  - Browser smoke test succeeded: inserted a Scene, selected `EXT` and `NIGHT`, typed `desert road`, verified left scene item became `EXT DESERT ROAD - NIGHT`, then inserted `qa bot` as a Character and verified Characters list/card showed `QA BOT`; no console warning/error.
 
 ## Decisions
 
