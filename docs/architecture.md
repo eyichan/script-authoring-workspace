@@ -354,5 +354,5 @@ Persistence:
 - The current workspace shell still owns broad state and page orchestration. Continue splitting orchestration boundaries when future changes touch those areas.
 - Next.js 16 behavior may differ from older examples. Read local Next docs before adding server-side APIs.
 - Characters page in the reference showed inconsistent counters. Our implementation should use one derived calculation instead of reproducing that inconsistency.
-- Domain behavior is currently verified by TypeScript build only. Add unit tests or deterministic assertion scripts before the sync logic becomes more complex.
+- Domain behavior is covered by deterministic tests for screenplay parsing, block operations, project lifecycle, and export formatting. Add targeted tests with future domain expansions.
 - PDF export uses a lightweight native PDF generator in the domain layer. Rich screenplay pagination and multi-page layout remain future product hardening work.

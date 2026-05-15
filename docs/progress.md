@@ -2,7 +2,7 @@
 
 ## Current Step
 
-M5. Product verification and hardening
+M5 complete. Functional script workspace is implemented and verified.
 
 ## Completed
 
@@ -65,14 +65,14 @@ M5. Product verification and hardening
 
 ## In Progress
 
-- M5 product verification and component hardening.
+- No blocking implementation milestone is active.
 
 ## Next
 
-1. Continue splitting the remaining workspace orchestration when future behavior changes touch it.
+1. Continue splitting remaining workspace orchestration when future behavior changes touch it.
 2. Improve PDF pagination and screenplay layout fidelity if export quality becomes a product priority.
-3. Expand E2E for share permission edge cases and any component split that changes workflow wiring.
-4. Continue splitting the script editor/workbench modules when implementation work touches those areas.
+3. Expand E2E for share permission edge cases and future component splits that change workflow wiring.
+4. Add real-time collaboration only if multiplayer editing becomes an explicit product requirement.
 
 ## Verification Log
 
@@ -213,6 +213,13 @@ M5. Product verification and hardening
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 6 Playwright tests passed.
   - `npm test`: succeeded, 10 tests passed.
+- Final completion audit:
+  - `npm run lint`: succeeded.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run db:validate`: succeeded after injecting `DATABASE_URL` from `.env.local`.
+  - `npx prisma migrate status`: succeeded after injecting `DATABASE_URL` from `.env.local`; database schema is up to date with 2 migrations.
+  - `npm run build`: succeeded and listed `/` and `/share/[token]` as dynamic server-rendered routes.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed, covering project lifecycle, Enter-to-next-block persistence, Character -> Dialogue -> Character authoring, Workbench persistence, Final Draft/PDF exports, and persisted invite/reviewer management.
 - After adding persisted collaboration state:
   - `npx prisma migrate dev --name collaboration_state`: succeeded and created the `ProjectShare` and `ProjectCollaborator` tables.
   - `npm run db:generate`: succeeded.
