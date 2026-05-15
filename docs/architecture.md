@@ -40,6 +40,7 @@ Current files:
 ```text
 src/lib/domain/types.ts
 src/lib/domain/screenplay.ts
+src/lib/domain/script-blocks.ts
 src/lib/domain/seed.ts
 ```
 
@@ -47,6 +48,7 @@ Current domain behavior:
 
 - `parseSceneHeading` parses `INT./EXT.` style headings into prefix, location, and time of day.
 - `deriveScriptEntities` derives scenes, characters, locations, character references, scene dialogue counts, and location character references from ordered script blocks.
+- `script-blocks.ts` owns pure insert, update, duplicate, delete, and position resequencing operations for script blocks.
 - `seedWorkspace` provides a deterministic local workspace for the first functional integration pass.
 
 ### Persistence
@@ -170,11 +172,13 @@ Baseline:
 - `npm install`
 - `npm run lint`
 - `npm run build`
+- `npm test`
 
 Functional:
 
 - browser smoke tests for authoring workflow
 - derived entity assertions, either unit tests or deterministic script checks
+- current deterministic tests live in `src/lib/domain/screenplay.test.ts` and cover scene heading parsing, block insertion, text editing, duplicate/delete, empty scene rows, and derived scene/character/location sync.
 
 Persistence:
 

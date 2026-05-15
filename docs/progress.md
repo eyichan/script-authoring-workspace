@@ -31,6 +31,8 @@ M1. Local functional workspace
 - Added Character canvas inputs with derived character suggestions.
 - Added Script/Scenes sidebar scene click focus back to the source scene block.
 - Added shadcn `context-menu` and block right-click actions: `Open`, `Duplicate`, and `Delete`.
+- Added `npm test` with deterministic domain tests for scene heading parsing, script block insertion/editing/duplicate/delete, and derived entity sync.
+- Extracted pure script block operations into `src/lib/domain/script-blocks.ts` and wired the Script editor to use them.
 
 ## In Progress
 
@@ -46,7 +48,7 @@ M1. Local functional workspace
    - Enter-key next-block flow: Scene -> Action, Character -> Dialogue, Dialogue -> Character/Action
    - left scene item click focuses or scrolls to the source scene block
 2. Add explicit inline edit affordances if needed; source text editing and right-click duplicate/delete are implemented.
-3. Add deterministic domain/UI tests for insertion, editing, deletion, and derived entity sync.
+3. Add fuller UI/E2E tests if the workflow grows beyond browser smoke coverage.
 4. Implement manual modules: Beats, Props, Assets mock tasks, Storyboard locked state.
 5. Add local project creation/deletion flow.
 6. Move local state to Postgres/Prisma persistence only after the local authoring workflow is verified.
@@ -75,6 +77,12 @@ M1. Local functional workspace
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
   - Browser smoke test succeeded: right-clicked a Scene block, verified `Open`, `Duplicate`, and `Delete` menu items, duplicated the scene and saw scene count/list increase to 2, deleted the duplicate and saw scene count/list return to 1; no console warning/error.
+- After adding deterministic domain tests:
+  - `npm test`: succeeded, 4 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
+  - Browser smoke test succeeded after wiring the editor to domain block helpers: right-clicked a Scene block, duplicated it, verified Scenes/statistics increased to 2, then deleted the duplicate and verified they returned to 1.
+  - DevTools reported a retained `No label associated with a form field` issue after interaction, but DOM inspection showed every current input/textarea has an `id`, `name`, and associated `label`.
 
 ## Decisions
 

@@ -65,6 +65,12 @@ import {
   formatSceneHeading,
   parseSceneHeading,
 } from "@/lib/domain/screenplay";
+import {
+  deleteScriptBlock,
+  duplicateScriptBlock,
+  insertScriptBlockAfter,
+  updateScriptBlockText,
+} from "@/lib/domain/script-blocks";
 import { seedWorkspace } from "@/lib/domain/seed";
 import type {
   DerivedScene,
@@ -317,13 +323,6 @@ function getBlockSummary(block: ScriptBlock): string {
   return `${getBlockLabel(block.type)} block`;
 }
 
-function resequenceBlocks(blocks: ScriptBlock[]): ScriptBlock[] {
-  return blocks.map((block, index) => ({
-    ...block,
-    position: index + 1,
-  }));
-}
-
 export function ScriptForgeDemo() {
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
@@ -487,13 +486,8 @@ export function ScriptForgeDemo() {
         createdAt: timestamp,
         updatedAt: timestamp,
       };
-      const activeIndex = current.findIndex((block) => block.id === afterBlockId);
-      const insertIndex = activeIndex >= 0 ? activeIndex + 1 : current.length;
-      const nextBlocks = [...current];
 
-      nextBlocks.splice(insertIndex, 0, nextBlock);
-
-      return resequenceBlocks(nextBlocks);
+      return insertScriptBlockAfter(current, nextBlock, afterBlockId);
     });
     setActiveBlockId(id);
     setPendingFocusBlockId(id);
@@ -501,17 +495,17 @@ export function ScriptForgeDemo() {
   };
 
   const handleUpdateScriptBlock = (id: string, value: string) => {
-    setBlocks((current) =>
-      current.map((block) =>
-        block.id === id
-          ? {
-              ...block,
-              text: normalizeBlockText(block.type, value),
-              updatedAt: `local-edit-${nextRevisionNumber.current++}`,
-            }
-          : block,
-      ),
-    );
+    setBlocks((current) => {
+      const block = current.find((item) => item.id === id);
+      const nextValue = block ? normalizeBlockText(block.type, value) : value;
+
+      return updateScriptBlockText(
+        current,
+        id,
+        nextValue,
+        `local-edit-${nextRevisionNumber.current++}`,
+      );
+    });
   };
 
   const handleBlockKeyDown = (
@@ -549,15 +543,7 @@ export function ScriptForgeDemo() {
       updatedAt: timestamp,
     };
 
-    setBlocks((current) => {
-      const sourceIndex = current.findIndex((item) => item.id === block.id);
-      const insertIndex = sourceIndex >= 0 ? sourceIndex + 1 : current.length;
-      const nextBlocks = [...current];
-
-      nextBlocks.splice(insertIndex, 0, duplicate);
-
-      return resequenceBlocks(nextBlocks);
-    });
+    setBlocks((current) => duplicateScriptBlock(current, block.id, duplicate));
 
     if (block.type === "scene") {
       setSceneDrafts((current) => ({
@@ -577,7 +563,7 @@ export function ScriptForgeDemo() {
     const fallbackBlock =
       orderedBlocks[blockIndex + 1] ?? orderedBlocks[blockIndex - 1] ?? null;
 
-    setBlocks((current) => resequenceBlocks(current.filter((item) => item.id !== block.id)));
+    setBlocks((current) => deleteScriptBlock(current, block.id));
     setSceneDrafts((current) => {
       const nextDrafts = { ...current };
       delete nextDrafts[block.id];
