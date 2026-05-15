@@ -51,6 +51,20 @@ async function projectStatus(projectId: string) {
   return project;
 }
 
+async function projectTitleState(projectId: string) {
+  return prisma.project.findUniqueOrThrow({
+    where: { id: projectId },
+    select: {
+      title: true,
+      scripts: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { title: true },
+      },
+    },
+  });
+}
+
 async function clickButtonByText(page: Page, label: string) {
   await page.evaluate((buttonLabel) => {
     const button = [...document.querySelectorAll("button")].find(
@@ -70,10 +84,23 @@ test("persists project create, trash, and restore", async ({ page }) => {
   await page.getByLabel("Home").click();
 
   await page.getByRole("button", { name: "New Project" }).click({ force: true });
-  await expect(page.getByRole("button", { name: /Untitled Script/ }).first()).toBeVisible();
+  await expect(page.getByLabel("Project title")).toHaveValue(/Untitled Script/);
 
   const created = await latestActiveProject();
   expect(created.status).toBe("active");
+
+  await page.getByLabel("Project title").fill("Renamed E2E Project");
+  await page.getByLabel("Project title").press("Enter");
+
+  await expect
+    .poll(async () => projectTitleState(created.id))
+    .toEqual({
+      title: "Renamed E2E Project",
+      scripts: [{ title: "Renamed E2E Project" }],
+    });
+
+  await page.reload();
+  await expect(page.getByLabel("Project title")).toHaveValue("Renamed E2E Project");
 
   await page.getByLabel("Home").click();
   const createdCard = page.getByTestId(`project-card-${created.id}`);

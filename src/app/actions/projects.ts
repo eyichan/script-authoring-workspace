@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   createProjectSnapshot,
   getWorkspaceByProjectId,
+  renameProjectSnapshot,
   restoreProjectSnapshot,
   trashProjectSnapshot,
 } from "@/lib/db/workspace";
@@ -27,6 +28,15 @@ export async function trashProjectAction(projectId: string) {
 
 export async function restoreProjectAction(projectId: string) {
   const snapshot = await restoreProjectSnapshot(projectId);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function renameProjectAction(input: {
+  projectId: string;
+  title: string;
+}) {
+  const snapshot = await renameProjectSnapshot(input);
   revalidatePath("/");
   return snapshot;
 }

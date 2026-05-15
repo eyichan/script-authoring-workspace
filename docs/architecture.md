@@ -194,11 +194,14 @@ Project lifecycle flow:
 ```text
 Home / project selector
   -> Recents project library
-  -> server action
+  -> create / open / rename / trash / restore server action
   -> Prisma Project/Script mutation or load
   -> return WorkspaceSnapshot
   -> selected Project title and workspace shell update
 ```
+
+Project rename keeps the first script title synchronized with the project title so exports,
+share pages, and the project library present the same workspace name.
 
 Implemented local flow:
 
@@ -307,6 +310,7 @@ Persistence:
 - E2E tests assert Beat, Prop, and Asset records can be deleted from the UI and removed from Postgres.
 - E2E tests assert invite link and collaborator rows after browser interactions
 - E2E tests open the generated `/share/<token>` route and assert shared script content and reviewer state render from persisted records
+- E2E tests assert project rename updates both `Project.title` and the first `Script.title`, then survives refresh.
 
 ## Open Risks
 

@@ -50,6 +50,7 @@ M2. Persistence foundation
 - Added a read-only `/share/<token>` route for persisted invite links.
 - Fixed Enter-to-next-block editing so the current unblurred script line is committed before the next block is inserted.
 - Added persisted delete flows for Beat, Prop, and Asset workbench records.
+- Added persisted project rename that keeps the first script title in sync.
 
 ## In Progress
 
@@ -178,6 +179,13 @@ M2. Persistence foundation
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including creating Beat, Prop, and Asset records, refreshing to verify persistence, deleting each from the UI, and verifying the Postgres rows returned to zero.
+- After adding persisted project rename:
+  - `renameProjectAction` updates the active project title and first script title through a server action.
+  - The workspace project selector area now exposes a compact editable `Project title` input while preserving the project-library chevron.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including renaming a new project, verifying both `Project.title` and first `Script.title` in Postgres, and confirming the title survives refresh.
 
 ## Decisions
 

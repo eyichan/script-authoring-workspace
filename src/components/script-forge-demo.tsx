@@ -42,6 +42,7 @@ import {
 import {
   createProjectAction,
   openProjectAction,
+  renameProjectAction,
   restoreProjectAction,
   trashProjectAction,
 } from "@/app/actions/projects";
@@ -419,6 +420,10 @@ export function ScriptForgeDemo({
   const [activeProjectId, setActiveProjectId] = useState(
     initialActiveProjectId ?? initialWorkspace.project.id,
   );
+  const [projectTitleDraft, setProjectTitleDraft] = useState({
+    projectId: initialWorkspace.project.id,
+    title: initialWorkspace.project.title,
+  });
   const [script, setScript] = useState<Script>(initialWorkspace.script);
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(initialWorkspace.blocks);
@@ -477,6 +482,10 @@ export function ScriptForgeDemo({
   const activeProject =
     projects.find((project) => project.id === activeProjectId) ??
     initialWorkspace.project;
+  const projectTitleValue =
+    projectTitleDraft.projectId === activeProject.id
+      ? projectTitleDraft.title
+      : activeProject.title;
   const activeProjects = useMemo(() => getActiveProjects(projects), [projects]);
   const trashedProjects = useMemo(() => getTrashedProjects(projects), [projects]);
 
@@ -950,6 +959,27 @@ export function ScriptForgeDemo({
     void runProjectMutation(() => restoreProjectAction(projectId));
   };
 
+  const handleRenameProject = () => {
+    const nextTitle = projectTitleValue.trim();
+
+    if (!nextTitle) {
+      setProjectTitleDraft({
+        projectId: activeProject.id,
+        title: activeProject.title,
+      });
+      return;
+    }
+
+    if (nextTitle === activeProject.title) return;
+
+    void runProjectMutation(() =>
+      renameProjectAction({
+        projectId: activeProject.id,
+        title: nextTitle,
+      }),
+    );
+  };
+
   const handleWorkbenchAction = () => {
     if (!isWorkbenchPage(activePage)) return;
 
@@ -1040,14 +1070,49 @@ export function ScriptForgeDemo({
       ) : (
       <div className="flex h-[calc(100%-48px)] min-h-0 gap-2 px-2 pb-2 max-[900px]:overflow-auto">
         <aside className="flex min-h-0 w-[230px] shrink-0 flex-col pb-0 pt-4 max-[900px]:hidden">
-          <Button
-            variant="secondary"
-            onClick={() => setWorkspaceMode("projects")}
-            className="ml-4 h-[30px] w-[112px] justify-between rounded-lg bg-[#e4e8e6] px-2.5 text-[13px] font-normal text-[#171a19] shadow-none transition-colors duration-300 hover:bg-[#dde2df] active:translate-y-0 max-[1180px]:hidden"
-          >
-            <span className="truncate">{activeProject.title}</span>
-            <ChevronDown data-icon="inline-end" />
-          </Button>
+          <div className="ml-4 flex h-[30px] w-[150px] items-center overflow-hidden rounded-lg bg-[#e4e8e6] text-[13px] font-normal text-[#171a19] shadow-none transition-colors duration-300 focus-within:bg-[#dde2df] max-[1180px]:hidden">
+            <label htmlFor="project-title" className="sr-only">
+              Project title
+            </label>
+            <input
+              id="project-title"
+              name="project-title"
+              aria-label="Project title"
+              value={projectTitleValue}
+              disabled={projectMutationPending}
+              spellCheck={false}
+              onChange={(event) =>
+                setProjectTitleDraft({
+                  projectId: activeProject.id,
+                  title: event.target.value,
+                })
+              }
+              onBlur={handleRenameProject}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                }
+                if (event.key === "Escape") {
+                  setProjectTitleDraft({
+                    projectId: activeProject.id,
+                    title: activeProject.title,
+                  });
+                  event.currentTarget.blur();
+                }
+              }}
+              className="min-w-0 flex-1 bg-transparent px-2.5 outline-none placeholder:text-[#8a908d] disabled:opacity-60"
+            />
+            <button
+              type="button"
+              aria-label="Open projects"
+              disabled={projectMutationPending}
+              onClick={() => setWorkspaceMode("projects")}
+              className="grid h-full w-8 shrink-0 place-items-center text-[#5d6561] transition-colors hover:bg-[#d7ddda] disabled:opacity-60"
+            >
+              <ChevronDown className="size-3.5" />
+            </button>
+          </div>
 
           <nav className="mt-4 flex flex-col gap-1 pl-4">
             {navItems.map((item) => (

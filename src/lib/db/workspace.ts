@@ -360,6 +360,42 @@ export async function restoreProjectSnapshot(
   return getWorkspaceSnapshot(projectId);
 }
 
+export async function renameProjectSnapshot({
+  projectId,
+  title,
+}: {
+  projectId: string;
+  title: string;
+}): Promise<WorkspaceSnapshot> {
+  const nextTitle = title.trim();
+
+  if (!nextTitle) {
+    throw new Error("Project title cannot be empty.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.project.update({
+      where: { id: projectId },
+      data: { title: nextTitle },
+    });
+
+    const script = await tx.script.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+
+    if (script) {
+      await tx.script.update({
+        where: { id: script.id },
+        data: { title: nextTitle },
+      });
+    }
+  });
+
+  return getWorkspaceSnapshot(projectId);
+}
+
 export async function insertScriptBlockSnapshot({
   projectId,
   scriptId,
