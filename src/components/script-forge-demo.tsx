@@ -73,7 +73,10 @@ import {
 } from "@/lib/domain/script-blocks";
 import { seedWorkspace } from "@/lib/domain/seed";
 import type {
+  AssetTask,
+  Beat,
   DerivedScene,
+  Prop,
   SceneHeadingParts,
   ScriptBlock,
   ScriptBlockType,
@@ -252,6 +255,7 @@ const initialAdditions: Record<WorkbenchPageName, number> = {
 
 const scenePrefixOptions = ["INT", "EXT"] as const;
 const sceneTimeOptions = ["DAY", "NIGHT"] as const;
+const localCreatedAt = "local-draft";
 
 function isWorkbenchPage(page: PageName): page is WorkbenchPageName {
   return page !== "Script" && page !== "Beats" && page !== "Storyboard";
@@ -327,11 +331,14 @@ export function ScriptForgeDemo() {
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
   const nextBlockNumber = useRef(seedWorkspace.blocks.length + 1);
+  const nextBeatNumber = useRef(seedWorkspace.beats.length + 1);
+  const nextPropNumber = useRef(seedWorkspace.props.length + 1);
+  const nextAssetNumber = useRef(seedWorkspace.assetTasks.length + 1);
   const nextRevisionNumber = useRef(1);
   const blockInputRefs = useRef<Record<string, BlockInputElement | null>>({});
-  const [beats] = useState(seedWorkspace.beats);
-  const [props] = useState(seedWorkspace.props);
-  const [assetTasks] = useState(seedWorkspace.assetTasks);
+  const [beats, setBeats] = useState<Beat[]>(seedWorkspace.beats);
+  const [props, setProps] = useState<Prop[]>(seedWorkspace.props);
+  const [assetTasks, setAssetTasks] = useState<AssetTask[]>(seedWorkspace.assetTasks);
   const derived = useMemo(
     () => deriveScriptEntities(seedWorkspace.script.id, blocks),
     [blocks],
@@ -361,7 +368,7 @@ export function ScriptForgeDemo() {
     "Select a page action to create a local mock state.",
   );
   const [generatedStills, setGeneratedStills] = useState<string[]>([]);
-  const editorMode = activePage === "Script" || activePage === "Beats";
+  const editorMode = activePage === "Script";
 
   useEffect(() => {
     if (!pendingFocusBlockId) return;
@@ -388,6 +395,7 @@ export function ScriptForgeDemo() {
     isWorkbenchPage(activePage)
       ? dynamicCards[activePage].length + mockAdditions[activePage]
       : 0;
+  const pageActionCount = activePage === "Beats" ? beats.length : workbenchCount;
   const sidebarSectionTitle = activePage === "Script" ? "Scenes" : activePage;
   const sidebarItems = useMemo(() => {
     if (activePage === "Beats") {
@@ -642,6 +650,57 @@ export function ScriptForgeDemo() {
     focusBlockById(id.slice("scene-".length));
   };
 
+  const handleCreateBeat = () => {
+    const sequence = nextBeatNumber.current;
+    nextBeatNumber.current += 1;
+    const nextBeat: Beat = {
+      id: `beat-local-${sequence}`,
+      scriptId: seedWorkspace.script.id,
+      title: `Beat ${sequence}: Pressure Turn`,
+      description: "A local outline beat created from the Beats page.",
+      color: "racing-green",
+      durationMinutes: 8,
+    };
+
+    setBeats((current) => [...current, nextBeat]);
+    setWorkbenchMessage(`${nextBeat.title} created as a local beat.`);
+  };
+
+  const handleCreateProp = () => {
+    const sequence = nextPropNumber.current;
+    nextPropNumber.current += 1;
+    const nextProp: Prop = {
+      id: `prop-local-${sequence}`,
+      scriptId: seedWorkspace.script.id,
+      name: `Continuity Tag ${sequence}`,
+      category: "Continuity",
+      description: "A local prop record created from the Props page.",
+      imageNote: "Neutral table reference, labeled for continuity.",
+    };
+
+    setProps((current) => [...current, nextProp]);
+    setWorkbenchMessage(`${nextProp.name} added to the prop book.`);
+  };
+
+  const handleImportAsset = () => {
+    const sequence = nextAssetNumber.current;
+    nextAssetNumber.current += 1;
+    const isVideo = sequence % 2 === 0;
+    const nextAsset: AssetTask = {
+      id: `asset-local-${sequence}`,
+      scriptId: seedWorkspace.script.id,
+      kind: isVideo ? "concept-trailer" : "scene-dramatization",
+      title: isVideo
+        ? `Imported video reference ${sequence}`
+        : `Imported still reference ${sequence}`,
+      status: "done",
+      createdAt: `${localCreatedAt}-${sequence}`,
+    };
+
+    setAssetTasks((current) => [...current, nextAsset]);
+    setWorkbenchMessage(`${nextAsset.title} imported into the asset library.`);
+  };
+
   const handleWorkbenchAction = () => {
     if (!isWorkbenchPage(activePage)) return;
 
@@ -650,15 +709,20 @@ export function ScriptForgeDemo() {
       return;
     }
 
+    if (activePage === "Props") {
+      handleCreateProp();
+      return;
+    }
+
+    if (activePage === "Assets") {
+      handleImportAsset();
+      return;
+    }
+
     setMockAdditions((current) => ({
       ...current,
       [activePage]: current[activePage] + 1,
     }));
-
-    if (activePage === "Assets") {
-      setWorkbenchMessage("Imported a local reference asset into the mock library.");
-      return;
-    }
 
     setWorkbenchMessage(`${workbenchConfig[activePage].action} created as a local draft.`);
   };
@@ -773,12 +837,18 @@ export function ScriptForgeDemo() {
             "grid min-h-0 min-w-0 flex-1 grid-rows-[48px_1fr] overflow-hidden rounded-[24px] border border-[#ddddda] bg-[#fcfdfc] shadow-sm max-[900px]:h-auto max-[900px]:grid-rows-[auto_1fr]",
           )}
         >
-          <header className="relative flex items-center justify-center border-b border-[#ebebe7] px-4 max-[900px]:min-h-[96px] max-[900px]:flex-col max-[900px]:gap-2 max-[900px]:py-3">
+          <header className="pointer-events-none relative flex items-center justify-center border-b border-[#ebebe7] px-4 max-[900px]:min-h-[96px] max-[900px]:flex-col max-[900px]:gap-2 max-[900px]:py-3">
             <div className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center gap-2 text-[16px] font-normal max-[900px]:static max-[900px]:translate-y-0">
-              {editorMode ? activePage : activePage === "Storyboard" ? "Storyboard" : workbenchConfig[activePage].title}
+              {editorMode
+                ? activePage
+                : activePage === "Beats"
+                  ? "Beats"
+                  : activePage === "Storyboard"
+                    ? "Storyboard"
+                    : workbenchConfig[activePage].title}
               {!editorMode && activePage !== "Storyboard" ? (
                 <span className="rounded-md bg-[#f3f3f0] px-2 py-1 text-[13px] font-normal">
-                  {workbenchCount}
+                  {pageActionCount}
                 </span>
               ) : null}
             </div>
@@ -786,7 +856,7 @@ export function ScriptForgeDemo() {
               <Tabs
                 value={editorTab}
                 onValueChange={(value) => setEditorTab(value as EditorTab)}
-                className="items-center"
+                className="pointer-events-auto items-center"
               >
                 <TabsList className="h-9 rounded-[10px] border border-[#dfe4e1] bg-[#f4f6f5] p-[3px]">
                   <TabsTrigger value="script" className="h-7 min-w-20 rounded-lg border-0 bg-transparent text-[12px] font-medium text-[#6b7370] opacity-60 shadow-none transition-[background-color,box-shadow,color,opacity] duration-200 data-active:bg-[#fcfdfc] data-active:text-[#171a19] data-active:opacity-100 data-active:!shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)]">
@@ -799,6 +869,10 @@ export function ScriptForgeDemo() {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+            ) : activePage === "Beats" ? (
+              <Badge variant="secondary" className="justify-self-center">
+                Outline
+              </Badge>
             ) : activePage === "Storyboard" ? (
               <Badge variant="secondary" className="justify-self-center">
                 Master feature
@@ -816,12 +890,20 @@ export function ScriptForgeDemo() {
               />
             )}
             {editorMode ? (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 max-[900px]:hidden">
+              <div className="pointer-events-auto absolute right-4 top-1/2 -translate-y-1/2 max-[900px]:hidden">
                 <IconChrome label="Statistics" icon={BarChart3} />
               </div>
+            ) : activePage === "Beats" ? (
+              <Button
+                className="pointer-events-auto absolute right-4 top-1/2 z-10 h-7 -translate-y-1/2 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0 max-[900px]:static max-[900px]:translate-y-0"
+                onClick={handleCreateBeat}
+              >
+                <Plus className="size-[14px]" data-icon="inline-start" />
+                New Beat
+              </Button>
             ) : activePage !== "Storyboard" ? (
               <Button
-                className="absolute right-4 top-1/2 h-7 -translate-y-1/2 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0 max-[900px]:static max-[900px]:translate-y-0"
+                className="pointer-events-auto absolute right-4 top-1/2 z-10 h-7 -translate-y-1/2 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0 max-[900px]:static max-[900px]:translate-y-0"
                 onClick={handleWorkbenchAction}
               >
                 {workbenchConfig[activePage].action === "Tidy" ? (
@@ -844,6 +926,8 @@ export function ScriptForgeDemo() {
           >
             {activePage === "Storyboard" ? (
               <LockedStoryboard />
+            ) : activePage === "Beats" ? (
+              <BeatsPage beats={beats} message={workbenchMessage} />
             ) : !editorMode ? (
               <WorkbenchPage
                 page={activePage}
@@ -1248,7 +1332,7 @@ function WorkbenchTabs({
   onChange: (tab: string) => void;
 }) {
   return (
-    <div className="flex h-9 items-center rounded-[10px] border border-[#dfe4e1] bg-[#f4f6f5] p-[3px]">
+    <div className="pointer-events-auto flex h-9 items-center rounded-[10px] border border-[#dfe4e1] bg-[#f4f6f5] p-[3px]">
       {tabs.map((tab) => (
         <Button
           key={tab.label}
@@ -1264,6 +1348,54 @@ function WorkbenchTabs({
           {tab.label}
         </Button>
       ))}
+    </div>
+  );
+}
+
+function BeatsPage({
+  beats,
+  message,
+}: {
+  beats: Beat[];
+  message: string;
+}) {
+  return (
+    <div className="relative min-h-[669px] px-6 py-6">
+      <div className="grid grid-cols-[minmax(0,1fr)_260px] gap-4 max-[1100px]:grid-cols-1">
+        <div className="overflow-hidden rounded-xl border border-[#deded8] bg-[#fcfdfc] shadow-[0_8px_24px_rgb(42_42_37/0.08)]">
+          {beats.map((beat, index) => (
+            <div
+              key={beat.id}
+              className="grid grid-cols-[44px_minmax(0,1fr)_76px] items-center gap-3 border-b border-[#eeeeea] px-4 py-3 text-[13px] last:border-b-0"
+            >
+              <span className="text-[#8b8b84]">#{index + 1}</span>
+              <div className="min-w-0">
+                <strong className="block truncate font-medium text-[#242421]">
+                  {beat.title}
+                </strong>
+                <span className="block truncate text-[#777771]">
+                  {beat.description}
+                </span>
+              </div>
+              <Badge variant="secondary">{beat.durationMinutes} min</Badge>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-[#deded8] bg-white p-4 shadow-[0_8px_24px_rgb(42_42_37/0.07)]">
+          <div className="mb-3 grid size-9 place-items-center rounded-lg bg-[#eef3ef] text-[#2e6248]">
+            <Hourglass className="size-5" />
+          </div>
+          <h3 className="text-[16px] font-medium leading-6">Beat outline</h3>
+          <p className="mt-2 text-[13px] leading-5 text-[#777771]">
+            Beats are manual outline units. They stay separate from script-derived
+            scenes so the writer can plan structure before rewriting pages.
+          </p>
+          <div className="mt-4 rounded-lg border border-dashed border-[#cfd8d2] bg-[#f8faf8] p-3 text-[13px] leading-5 text-[#6f7772]">
+            {message}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -104,6 +104,10 @@ Current UI behavior:
 - Script blocks expose a right-click context menu with `Open`, `Duplicate`, and `Delete`.
 - Duplicate and Delete mutate the source block list, then derived Scenes, Characters, and Locations recalculate from the remaining ordered blocks.
 - Workbench pages receive derived cards instead of static mock cards.
+- Beats is a manual outline page with local `Beat` creation, sidebar sync, and card/list rendering.
+- Props is a manual production-memory page; `New Prop` creates local `Prop` records instead of mock counters.
+- Assets is a generated/imported task page; `Import` creates local `AssetTask` records and supports still/video tab filtering by title.
+- Storyboard remains a locked module and reuses the unavailable-module visual pattern.
 
 ### State
 

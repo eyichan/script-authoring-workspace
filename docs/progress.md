@@ -33,6 +33,7 @@ M1. Local functional workspace
 - Added shadcn `context-menu` and block right-click actions: `Open`, `Duplicate`, and `Delete`.
 - Added `npm test` with deterministic domain tests for scene heading parsing, script block insertion/editing/duplicate/delete, and derived entity sync.
 - Extracted pure script block operations into `src/lib/domain/script-blocks.ts` and wired the Script editor to use them.
+- Added local manual module workflows for Beats, Props, and Assets, while keeping Storyboard locked with the unavailable-module pattern.
 
 ## In Progress
 
@@ -49,9 +50,8 @@ M1. Local functional workspace
    - left scene item click focuses or scrolls to the source scene block
 2. Add explicit inline edit affordances if needed; source text editing and right-click duplicate/delete are implemented.
 3. Add fuller UI/E2E tests if the workflow grows beyond browser smoke coverage.
-4. Implement manual modules: Beats, Props, Assets mock tasks, Storyboard locked state.
-5. Add local project creation/deletion flow.
-6. Move local state to Postgres/Prisma persistence only after the local authoring workflow is verified.
+4. Add local project creation/deletion flow.
+5. Move local state to Postgres/Prisma persistence only after the local authoring workflow is verified.
 
 ## Verification Log
 
@@ -83,6 +83,12 @@ M1. Local functional workspace
   - `npm run build`: succeeded.
   - Browser smoke test succeeded after wiring the editor to domain block helpers: right-clicked a Scene block, duplicated it, verified Scenes/statistics increased to 2, then deleted the duplicate and verified they returned to 1.
   - DevTools reported a retained `No label associated with a form field` issue after interaction, but DOM inspection showed every current input/textarea has an `id`, `name`, and associated `label`.
+- After adding manual module workflows:
+  - `npm test`: succeeded, 4 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
+  - Playwright smoke test succeeded: `New Beat` created `Beat 2: Pressure Turn`, `New Prop` created `Continuity Tag 2`, `Import` created `Imported still reference 1`, and Storyboard rendered `Storyboard is locked`.
+  - Chrome DevTools connection timed out on `Network.enable`, so the runtime smoke used Playwright for this pass.
 
 ## Decisions
 
