@@ -52,6 +52,7 @@ M5. Product verification and hardening
 - Added persisted delete flows for Beat, Prop, and Asset workbench records.
 - Added persisted project rename that keeps the first script title in sync.
 - Added persisted title edit flows for Beat, Prop, and Asset workbench records.
+- Added persisted collaboration management for reviewer removal and share-link revocation.
 
 ## In Progress
 
@@ -60,7 +61,7 @@ M5. Product verification and hardening
 ## Next
 
 1. Split the large workspace component once persistence behavior stabilizes.
-2. Add collaborator management beyond invite-only state if the product requires reviewer removal, role changes, or share revocation.
+2. Add collaborator role editing if the product needs roles beyond owner and invited reviewer.
 3. Add native binary PDF export if browser-printable HTML is not sufficient.
 4. Expand E2E for character/dialogue editing, share permissions, and any component split that changes workflow wiring.
 
@@ -194,6 +195,14 @@ M5. Product verification and hardening
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including editing Beat, Prop, and Asset titles, verifying the Postgres values, then deleting the renamed records.
+- After adding persisted collaboration management:
+  - `removeCollaboratorAction` removes non-owner collaborators through a server action constrained to the current project.
+  - `revokeShareAction` deletes the current `ProjectShare` so existing `/share/<token>` links return not found.
+  - The Collaboration inspector now exposes `Remove` icon buttons for reviewers and a `Revoke` button for active share links.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including Invite, share page access, reviewer removal, share revocation, and 404 verification for the revoked share token.
 
 ## Decisions
 
@@ -208,4 +217,4 @@ M5. Product verification and hardening
 - Use `127.0.0.1` for the local Docker Postgres connection string on this host.
 - Keep `.env.local` untracked; commit `.env.example` so the database URL contract is recoverable in later sessions.
 - Treat PDF as printable HTML until a native PDF renderer is selected; do not label that path as binary PDF output.
-- Collaboration currently covers persisted invite/share state and collaborator display, not real-time multiplayer editing.
+- Collaboration covers persisted invite/share state, reviewer removal, and share revocation, not real-time multiplayer editing.

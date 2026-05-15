@@ -283,7 +283,7 @@ test("downloads a Final Draft export from persisted script blocks", async ({ pag
   expect(content).toContain("INT. EXPORT BAY - DAY");
 });
 
-test("creates a persisted invite link and reviewer state", async ({ page }) => {
+test("manages persisted invite links and reviewer state", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Home").click();
   const projectCountBefore = await prisma.project.count();
@@ -311,9 +311,39 @@ test("creates a persisted invite link and reviewer state", async ({ page }) => {
   expect(invited.collaborators).toHaveLength(2);
   expect(invited.collaborators.some((collaborator) => collaborator.status === "Invited"))
     .toBe(true);
+  const shareToken = invited.share!.token;
 
-  await page.goto(`/share/${invited.share?.token}`);
+  await page.goto(`/share/${shareToken}`);
   await expect(page.getByText("Read-only review link")).toBeVisible();
   await expect(page.getByText("INT. SHARE ROOM - DAY").first()).toBeVisible();
   await expect(page.getByText("Reviewer 2").first()).toBeVisible();
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Collaboration" }).click();
+  await page.getByRole("button", { name: "Remove Reviewer 2" }).click({
+    force: true,
+  });
+  await expect
+    .poll(async () => {
+      const project = await prisma.project.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { collaborators: true },
+      });
+      return project.collaborators.map((collaborator) => collaborator.role).sort();
+    })
+    .toEqual(["Owner"]);
+
+  await page.getByRole("button", { name: "Revoke" }).click({ force: true });
+  await expect
+    .poll(async () => {
+      const project = await prisma.project.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { share: true },
+      });
+      return project.share;
+    })
+    .toBeNull();
+
+  const revokedResponse = await page.goto(`/share/${shareToken}`);
+  expect(revokedResponse?.status()).toBe(404);
 });

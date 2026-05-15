@@ -46,7 +46,11 @@ import {
   restoreProjectAction,
   trashProjectAction,
 } from "@/app/actions/projects";
-import { createInviteAction } from "@/app/actions/collaboration";
+import {
+  createInviteAction,
+  removeCollaboratorAction,
+  revokeShareAction,
+} from "@/app/actions/collaboration";
 import {
   commitAndInsertScriptBlockAction,
   deleteScriptBlockAction,
@@ -1076,6 +1080,19 @@ export function ScriptForgeDemo({
     void runCollaborationMutation(() => createInviteAction(activeProject.id));
   };
 
+  const handleRemoveCollaborator = (collaboratorId: string) => {
+    void runCollaborationMutation(() =>
+      removeCollaboratorAction({
+        projectId: activeProject.id,
+        collaboratorId,
+      }),
+    );
+  };
+
+  const handleRevokeShare = () => {
+    void runCollaborationMutation(() => revokeShareAction(activeProject.id));
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-[#f4f6f5] text-[#242421]">
       <header className="flex h-12 items-center justify-between px-3">
@@ -1718,6 +1735,9 @@ export function ScriptForgeDemo({
                   <CollaborationPanel
                     collaboration={collaboration}
                     message={collaborationMessage}
+                    mutationPending={collaborationMutationPending}
+                    onRemoveCollaborator={handleRemoveCollaborator}
+                    onRevokeShare={handleRevokeShare}
                   />
                 )}
 
@@ -2361,15 +2381,34 @@ function CoverPreview() {
 function CollaborationPanel({
   collaboration,
   message,
+  mutationPending,
+  onRemoveCollaborator,
+  onRevokeShare,
 }: {
   collaboration: CollaborationState;
   message: string;
+  mutationPending: boolean;
+  onRemoveCollaborator: (collaboratorId: string) => void;
+  onRevokeShare: () => void;
 }) {
   return (
     <div className="mt-5 space-y-3">
       <div className="rounded-xl border border-[#dce7dd] bg-[#f4faf5] p-3">
-        <div className="text-[13px] font-semibold text-[#2e6e45]">
-          Share link
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[13px] font-semibold text-[#2e6e45]">
+            Share link
+          </div>
+          {collaboration.shareUrl ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={mutationPending}
+              onClick={onRevokeShare}
+              className="h-7 rounded-full px-2 text-[12px] text-[#b0473e] hover:bg-[#f2e8e6] active:translate-y-0"
+            >
+              Revoke
+            </Button>
+          ) : null}
         </div>
         <div className="mt-2 break-all rounded-md bg-[#fcfdfc]/90 px-2.5 py-2 text-[12px] leading-5 text-[#58635e]">
           {collaboration.shareUrl ?? "No share link yet"}
@@ -2387,7 +2426,7 @@ function CollaborationPanel({
                 {reviewer.initials}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-[13px] font-medium text-[#252522]">
                 {reviewer.role}
               </div>
@@ -2395,6 +2434,19 @@ function CollaborationPanel({
                 {reviewer.status}
               </div>
             </div>
+            {reviewer.role !== "Owner" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                disabled={mutationPending}
+                aria-label={`Remove ${reviewer.role}`}
+                onClick={() => onRemoveCollaborator(reviewer.id)}
+                className="rounded-full text-[#8d938f] hover:bg-[#f1f4f2] hover:text-[#b0473e] active:translate-y-0"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            ) : null}
           </div>
         </div>
       ))}

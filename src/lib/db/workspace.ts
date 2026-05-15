@@ -874,3 +874,43 @@ export async function createInviteSnapshot({
     message: `Invite link ready: ${shareUrl}`,
   };
 }
+
+export async function removeCollaboratorSnapshot({
+  projectId,
+  collaboratorId,
+}: {
+  projectId: string;
+  collaboratorId: string;
+}): Promise<CollaborationMutationSnapshot> {
+  const deleted = await prisma.projectCollaborator.deleteMany({
+    where: {
+      id: collaboratorId,
+      projectId,
+      NOT: { role: "Owner" },
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Reviewer removed from the collaboration list."
+      : "Reviewer was already removed or cannot be removed.",
+  };
+}
+
+export async function revokeProjectShareSnapshot({
+  projectId,
+}: {
+  projectId: string;
+}): Promise<CollaborationMutationSnapshot> {
+  const deleted = await prisma.projectShare.deleteMany({
+    where: { projectId },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Share link revoked. Existing review links now return not found."
+      : "No active share link to revoke.",
+  };
+}

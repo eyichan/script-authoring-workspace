@@ -289,6 +289,17 @@ Invite click
   -> render read-only script, scenes, review stats, and collaborator state
 ```
 
+Implemented persisted collaboration management flow:
+
+```text
+Remove reviewer / Revoke share
+  -> server action with projectId and collaborator id or share target
+  -> Prisma deleteMany constrained to the current project
+  -> return WorkspaceSnapshot plus status message
+  -> client refreshes Collaboration panel and collaborator count
+  -> revoked /share/<token> route returns not found
+```
+
 ## Verification Gates
 
 Baseline:
@@ -321,6 +332,7 @@ Persistence:
 - E2E tests assert Beat, Prop, and Asset titles can be edited from the UI and persisted to Postgres.
 - E2E tests assert invite link and collaborator rows after browser interactions
 - E2E tests open the generated `/share/<token>` route and assert shared script content and reviewer state render from persisted records
+- E2E tests assert reviewers can be removed and revoked share links return 404.
 - E2E tests assert project rename updates both `Project.title` and the first `Script.title`, then survives refresh.
 
 ## Open Risks
