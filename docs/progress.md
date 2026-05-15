@@ -24,6 +24,9 @@ M1. Local functional workspace
 - Added local block insertion from the floating script toolbar.
 - Linked script block changes to derived Scenes, Characters, Locations, sidebar items, statistics, and workbench cards.
 - Corrected the insertion interaction so toolbar clicks append directly to the script canvas, matching the reference workflow.
+- Replaced fixed inserted text with editable canvas blocks that focus immediately after toolbar insertion.
+- Fixed derived scene sync so empty scene selector rows no longer create `UNTITLED LOCATION` entities.
+- Added reference route and workbench ownership notes in `docs/reference-workbench-routes.md`.
 
 ## In Progress
 
@@ -32,9 +35,10 @@ M1. Local functional workspace
 ## Next
 
 1. Add script block edit/delete and context menu actions.
-2. Add local project creation/deletion flow.
-3. Add deterministic domain/UI tests for insertion and derived entity sync.
-4. Move local state to Postgres/Prisma persistence.
+2. Add structured scene selector controls for `INT./EXT.`, `LOCATION`, and `DAY/NIGHT`.
+3. Add local project creation/deletion flow.
+4. Add deterministic domain/UI tests for insertion and derived entity sync.
+5. Move local state to Postgres/Prisma persistence.
 
 ## Verification Log
 
@@ -48,6 +52,10 @@ M1. Local functional workspace
 - After wiring local authoring interactions:
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
+- After replacing fixed inserts with editable canvas blocks:
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
+  - Browser smoke test succeeded: clicked `Scene`, typed `EXT. TEST RANGE - NIGHT` in the canvas block, verified left Scenes and Scene Board count/card updated to 2, and confirmed no console warning/error.
 
 ## Decisions
 

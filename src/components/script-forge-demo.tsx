@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import type { ComponentType, ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentType, KeyboardEvent, ReactNode } from "react";
 import {
   Atom,
   BadgeCheck,
@@ -100,6 +100,28 @@ const toolToBlockType: Record<ToolLabel, ScriptBlockType> = {
   Transition: "transition",
   Comment: "comment",
   Subtitle: "subtitle",
+};
+
+const blockTypeToTool: Record<ScriptBlockType, ToolLabel> = {
+  scene: "Scene",
+  action: "Action",
+  character: "Character",
+  paren: "Paren",
+  dialogue: "Dialogue",
+  transition: "Transition",
+  comment: "Comment",
+  subtitle: "Subtitle",
+};
+
+const nextToolByBlockType: Record<ScriptBlockType, ToolLabel> = {
+  scene: "Action",
+  action: "Action",
+  character: "Dialogue",
+  paren: "Dialogue",
+  dialogue: "Character",
+  transition: "Scene",
+  comment: "Action",
+  subtitle: "Action",
 };
 
 const exportLabels: Record<ExportFormat, string> = {
@@ -225,10 +247,25 @@ function getDefaultBlockText(tool: ToolLabel): string {
   }
 }
 
+function normalizeBlockText(type: ScriptBlockType, value: string): string {
+  if (type === "scene" || type === "character" || type === "transition") {
+    return value.toUpperCase();
+  }
+
+  return value;
+}
+
+function resizeBlockInput(input: HTMLTextAreaElement) {
+  input.style.height = "auto";
+  input.style.height = `${Math.max(input.scrollHeight, 29)}px`;
+}
+
 export function ScriptForgeDemo() {
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
   const nextBlockNumber = useRef(seedWorkspace.blocks.length + 1);
+  const nextRevisionNumber = useRef(1);
+  const blockInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [beats] = useState(seedWorkspace.beats);
   const [props] = useState(seedWorkspace.props);
   const [assetTasks] = useState(seedWorkspace.assetTasks);
@@ -241,6 +278,10 @@ export function ScriptForgeDemo() {
   );
   const [editorTab, setEditorTab] = useState<EditorTab>("script");
   const [activeTool, setActiveTool] = useState<ToolLabel>("Action");
+  const [activeBlockId, setActiveBlockId] = useState(
+    seedWorkspace.blocks.at(-1)?.id ?? "",
+  );
+  const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("info");
   const [paginationMode, setPaginationMode] = useState<PaginationMode>("minimal");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("fdx");
@@ -257,6 +298,19 @@ export function ScriptForgeDemo() {
   );
   const [generatedStills, setGeneratedStills] = useState<string[]>([]);
   const editorMode = activePage === "Script" || activePage === "Beats";
+
+  useEffect(() => {
+    if (!pendingFocusBlockId) return;
+
+    const input = blockInputRefs.current[pendingFocusBlockId];
+    if (!input) return;
+
+    input.focus();
+    input.select();
+    resizeBlockInput(input);
+    setPendingFocusBlockId(null);
+  }, [blocks, pendingFocusBlockId]);
+
   const dynamicCards: Record<WorkbenchPageName, string[]> = {
     Characters: derived.characters.map((character) => character.displayName),
     Props: props.map((prop) => prop.name),
@@ -349,7 +403,7 @@ export function ScriptForgeDemo() {
     ],
   );
 
-  const handleInsertScriptBlock = (tool: ToolLabel) => {
+  const handleInsertScriptBlock = (tool: ToolLabel, afterBlockId = activeBlockId) => {
     const type = toolToBlockType[tool];
     const sequence = nextBlockNumber.current;
     nextBlockNumber.current += 1;
@@ -361,19 +415,49 @@ export function ScriptForgeDemo() {
         id,
         scriptId: seedWorkspace.script.id,
         type,
-        text: getDefaultBlockText(tool),
-        position:
-          current.reduce((highest, block) => Math.max(highest, block.position), 0) + 1,
+        text: "",
+        position: 0,
         createdAt: timestamp,
         updatedAt: timestamp,
       };
+      const activeIndex = current.findIndex((block) => block.id === afterBlockId);
+      const insertIndex = activeIndex >= 0 ? activeIndex + 1 : current.length;
+      const nextBlocks = [...current];
 
-      return [...current, nextBlock];
+      nextBlocks.splice(insertIndex, 0, nextBlock);
+
+      return nextBlocks.map((block, index) => ({
+        ...block,
+        position: index + 1,
+      }));
     });
-    if (type === "scene") {
-      setActiveScene(`scene-${id}`);
-    }
+    setActiveBlockId(id);
+    setPendingFocusBlockId(id);
     setActiveTool(tool);
+  };
+
+  const handleUpdateScriptBlock = (id: string, value: string) => {
+    setBlocks((current) =>
+      current.map((block) =>
+        block.id === id
+          ? {
+              ...block,
+              text: normalizeBlockText(block.type, value),
+              updatedAt: `local-edit-${nextRevisionNumber.current++}`,
+            }
+          : block,
+      ),
+    );
+  };
+
+  const handleBlockKeyDown = (
+    block: ScriptBlock,
+    event: KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+
+    event.preventDefault();
+    handleInsertScriptBlock(nextToolByBlockType[block.type], block.id);
   };
 
   const handleWorkbenchAction = () => {
@@ -614,10 +698,33 @@ export function ScriptForgeDemo() {
 
               <article className="script-paper mx-auto mt-[-20px] min-h-[1210px] w-[min(816px,100%)] overflow-hidden">
                 <div className="mx-auto max-w-[576px] px-0 pb-36 pt-[104px] font-mono text-[16px] leading-[1.8] max-[900px]:max-w-[86%] max-[900px]:pt-20 max-[900px]:text-[13px]">
-                  {blocks.map((block) => (
-                    <p
+                  {blocks.map((block, index) => (
+                    <textarea
                       key={block.id}
+                      ref={(node) => {
+                        blockInputRefs.current[block.id] = node;
+                        if (node) resizeBlockInput(node);
+                      }}
+                      aria-label={`${block.type} block ${index + 1}`}
+                      rows={1}
+                      value={block.text}
+                      placeholder={getDefaultBlockText(blockTypeToTool[block.type])}
+                      spellCheck={false}
+                      onFocus={() => {
+                        setActiveBlockId(block.id);
+                        setActiveTool(blockTypeToTool[block.type]);
+                      }}
+                      onChange={(event) => {
+                        handleUpdateScriptBlock(block.id, event.target.value);
+                        if (block.type === "scene" && event.target.value.trim()) {
+                          setActiveScene(`scene-${block.id}`);
+                        }
+                        resizeBlockInput(event.target);
+                      }}
+                      onInput={(event) => resizeBlockInput(event.currentTarget)}
+                      onKeyDown={(event) => handleBlockKeyDown(block, event)}
                       className={cn(
+                        "block w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[16px] leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]",
                         "mb-[15px] whitespace-pre-wrap",
                         block.type === "scene" && "mt-1 uppercase",
                         block.type === "character" &&
@@ -628,9 +735,7 @@ export function ScriptForgeDemo() {
                           "mx-auto max-w-[470px]",
                         block.type === "transition" && "mb-5",
                       )}
-                    >
-                      {block.text}
-                    </p>
+                    />
                   ))}
                 </div>
               </article>

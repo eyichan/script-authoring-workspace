@@ -91,8 +91,10 @@ src/components/workspace/dialogs/
 Current UI behavior:
 
 - The Script page renders ordered `ScriptBlock` records instead of static screenplay lines.
-- The floating script toolbar directly appends the clicked screenplay element to the script canvas.
+- The floating script toolbar directly appends an editable screenplay block to the script canvas.
+- Script block textarea edits update the source block text in local state.
 - Adding a scene block creates a derived scene and makes it the active sidebar scene.
+- Empty or invalid scene selector rows do not create placeholder scene/location entities.
 - Adding a character block creates or reuses the derived character.
 - Adding dialogue after a character increases the derived character and scene dialogue counts.
 - Workbench pages receive derived cards instead of static mock cards.
@@ -139,7 +141,9 @@ Implemented local flow:
 
 ```text
 Floating toolbar click
-  -> append ScriptBlock in React state
+  -> append editable ScriptBlock in React state
+  -> focus inserted canvas block
+  -> user edits source text
   -> deriveScriptEntities(scriptId, blocks)
   -> update Script / Sidebar / Statistics / Workbench pages
 ```

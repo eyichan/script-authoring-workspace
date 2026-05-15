@@ -44,15 +44,14 @@ export function deriveScriptEntities(scriptId: string, blocks: ScriptBlock[]) {
   for (const block of sortedBlocks) {
     if (block.type === "scene") {
       const parsed = parseSceneHeading(block.text);
-      const fallbackLocation = canonicalizeName(block.text || "UNTITLED LOCATION");
-      const headingParts =
-        parsed ??
-        ({
-          prefix: "INT",
-          locationName: fallbackLocation,
-          timeOfDay: "DAY",
-        } satisfies SceneHeadingParts);
-      const heading = parsed ? formatSceneHeading(headingParts) : block.text.trim();
+      if (!parsed) {
+        activeScene = undefined;
+        activeCharacter = undefined;
+        continue;
+      }
+
+      const headingParts = parsed;
+      const heading = formatSceneHeading(headingParts);
 
       activeScene = {
         id: `scene-${block.id}`,
