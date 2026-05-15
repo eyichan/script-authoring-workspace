@@ -123,6 +123,7 @@ src/components/workspace/collaboration-panel.tsx
 src/components/workspace/inspector-panel.tsx
 src/components/workspace/project-library.tsx
 src/components/workspace/script-editor-canvas.tsx
+src/components/workspace/workbench-pages.tsx
 ```
 
 This file should continue to be split as functionality grows:

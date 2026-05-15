@@ -59,6 +59,7 @@ M5. Product verification and hardening
 - Extracted the Recents/Trash project library into `src/components/workspace/project-library.tsx`.
 - Extracted the script editor canvas and floating insert toolbar into `src/components/workspace/script-editor-canvas.tsx`.
 - Extracted the Writing inspector shell into `src/components/workspace/inspector-panel.tsx`.
+- Extracted the Workbench tabs, Beats page, derived Workbench page views, and locked Storyboard view into `src/components/workspace/workbench-pages.tsx`.
 
 ## In Progress
 
@@ -66,7 +67,7 @@ M5. Product verification and hardening
 
 ## Next
 
-1. Continue splitting the large workspace component; the next likely candidate is the workbench page views.
+1. Continue splitting the large workspace component; the next likely candidates are the top workspace shell/header and sidebar.
 2. Improve PDF pagination and screenplay layout fidelity if export quality becomes a product priority.
 3. Expand E2E for share permission edge cases and any component split that changes workflow wiring.
 4. Continue splitting the script editor/workbench modules when implementation work touches those areas.
@@ -187,6 +188,13 @@ M5. Product verification and hardening
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm test`: succeeded, 10 tests passed.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed.
+- After extracting Workbench page views:
+  - `src/components/workspace/workbench-pages.tsx` owns Workbench tab rendering, Beats list/details view, derived cards/lists for Characters/Props/Locations/Scenes/Assets, editable persisted card titles, delete controls, generated still cards, prompt states, and the locked Storyboard view.
+  - `src/components/script-forge-demo.tsx` still owns active page state, Workbench mutation handlers, derived card data, generated still IDs, and page-level action routing.
+  - `npm run lint`: succeeded.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 6 Playwright tests passed.
 - After adding persisted collaboration state:
   - `npx prisma migrate dev --name collaboration_state`: succeeded and created the `ProjectShare` and `ProjectCollaborator` tables.
