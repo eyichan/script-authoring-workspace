@@ -898,6 +898,52 @@ export async function removeCollaboratorSnapshot({
   };
 }
 
+export async function updateCollaboratorSnapshot({
+  projectId,
+  collaboratorId,
+  role,
+  status,
+}: {
+  projectId: string;
+  collaboratorId: string;
+  role: string;
+  status: string;
+}): Promise<CollaborationMutationSnapshot> {
+  const nextRole = role.trim();
+  const nextStatus = status.trim();
+
+  if (!nextRole) {
+    throw new Error("Collaborator role cannot be empty.");
+  }
+
+  if (!nextStatus) {
+    throw new Error("Collaborator status cannot be empty.");
+  }
+
+  if (nextRole.toLowerCase() === "owner") {
+    throw new Error("Owner role cannot be assigned from reviewer management.");
+  }
+
+  const updated = await prisma.projectCollaborator.updateMany({
+    where: {
+      id: collaboratorId,
+      projectId,
+      NOT: { role: "Owner" },
+    },
+    data: {
+      role: nextRole,
+      status: nextStatus,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: updated.count
+      ? `${nextRole} collaboration state saved.`
+      : "Reviewer was already removed or cannot be edited.",
+  };
+}
+
 export async function revokeProjectShareSnapshot({
   projectId,
 }: {

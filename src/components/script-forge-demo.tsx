@@ -50,6 +50,7 @@ import {
   createInviteAction,
   removeCollaboratorAction,
   revokeShareAction,
+  updateCollaboratorAction,
 } from "@/app/actions/collaboration";
 import {
   commitAndInsertScriptBlockAction,
@@ -1090,6 +1091,21 @@ export function ScriptForgeDemo({
     );
   };
 
+  const handleUpdateCollaborator = (
+    collaboratorId: string,
+    role: string,
+    status: string,
+  ) => {
+    void runCollaborationMutation(() =>
+      updateCollaboratorAction({
+        projectId: activeProject.id,
+        collaboratorId,
+        role,
+        status,
+      }),
+    );
+  };
+
   const handleRevokeShare = () => {
     void runCollaborationMutation(() => revokeShareAction(activeProject.id));
   };
@@ -1738,6 +1754,7 @@ export function ScriptForgeDemo({
                     message={collaborationMessage}
                     mutationPending={collaborationMutationPending}
                     onRemoveCollaborator={handleRemoveCollaborator}
+                    onUpdateCollaborator={handleUpdateCollaborator}
                     onRevokeShare={handleRevokeShare}
                   />
                 )}

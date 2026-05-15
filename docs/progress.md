@@ -55,6 +55,7 @@ M5. Product verification and hardening
 - Added persisted collaboration management for reviewer removal and share-link revocation.
 - Added E2E coverage for Character -> Dialogue -> Character screenplay authoring.
 - Extracted the Collaboration inspector panel into `src/components/workspace/collaboration-panel.tsx`.
+- Added persisted collaborator role and status editing.
 
 ## In Progress
 
@@ -63,9 +64,9 @@ M5. Product verification and hardening
 ## Next
 
 1. Split the large workspace component once persistence behavior stabilizes.
-2. Add collaborator role editing if the product needs roles beyond owner and invited reviewer.
-3. Add native binary PDF export if browser-printable HTML is not sufficient.
-4. Expand E2E for character/dialogue editing, share permissions, and any component split that changes workflow wiring.
+2. Add native binary PDF export if browser-printable HTML is not sufficient.
+3. Expand E2E for share permission edge cases and any component split that changes workflow wiring.
+4. Continue splitting the script editor/workbench modules when implementation work touches those areas.
 
 ## Verification Log
 
@@ -219,6 +220,15 @@ M5. Product verification and hardening
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 6 Playwright tests passed, including the collaboration management flow after extraction.
+- After adding collaborator role and status editing:
+  - `updateCollaboratorAction` updates non-owner collaborators through a server action constrained to the current project.
+  - The Collaboration panel now exposes an inline role field and status selector for reviewers.
+  - The share page reflects edited collaborator role/status because it reads the same persisted `ProjectCollaborator` records.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed, including updating `Reviewer 2` to `Producer`, changing status to `Reviewing`, verifying the share page, then removing the collaborator and revoking the share.
+  - The invite assertion now checks the accessible role input value instead of `getByText(/Reviewer 2/)`, because hidden labels also contain that text after adding editable controls.
 
 ## Decisions
 

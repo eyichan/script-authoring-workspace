@@ -337,7 +337,9 @@ test("manages persisted invite links and reviewer state", async ({ page }) => {
   await page.getByRole("button", { name: "Invite" }).click({ force: true });
   await expect(page.getByText("Share link")).toBeVisible();
   await expect(page.getByText(/\/share\//).first()).toBeVisible();
-  await expect(page.getByText(/Reviewer 2/)).toBeVisible();
+  await expect(page.getByLabel("Collaborator role Reviewer 2")).toHaveValue(
+    "Reviewer 2",
+  );
 
   const invited = await prisma.project.findUniqueOrThrow({
     where: { id: created.id },
@@ -350,10 +352,36 @@ test("manages persisted invite links and reviewer state", async ({ page }) => {
     .toBe(true);
   const shareToken = invited.share!.token;
 
+  await page.getByLabel("Collaborator role Reviewer 2").fill("Producer");
+  await page.getByLabel("Collaborator role Reviewer 2").press("Enter");
+  await expect
+    .poll(async () => {
+      const project = await prisma.project.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { collaborators: true },
+      });
+      return project.collaborators.find((collaborator) => collaborator.role === "Producer")
+        ?.status;
+    })
+    .toBe("Invited");
+
+  await page.getByLabel("Collaborator status Producer").selectOption("Reviewing");
+  await expect
+    .poll(async () => {
+      const project = await prisma.project.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { collaborators: true },
+      });
+      return project.collaborators.find((collaborator) => collaborator.role === "Producer")
+        ?.status;
+    })
+    .toBe("Reviewing");
+
   await page.goto(`/share/${shareToken}`);
   await expect(page.getByText("Read-only review link")).toBeVisible();
   await expect(page.getByText("INT. SHARE ROOM - DAY").first()).toBeVisible();
-  await expect(page.getByText("Reviewer 2").first()).toBeVisible();
+  await expect(page.getByText("Producer").first()).toBeVisible();
+  await expect(page.getByText("Reviewing").first()).toBeVisible();
 
   await page.goto("/");
   await page.getByLabel("Home").click();
@@ -362,7 +390,7 @@ test("manages persisted invite links and reviewer state", async ({ page }) => {
     .getByRole("button", { name: "Open" })
     .click({ force: true });
   await page.getByRole("tab", { name: "Collaboration" }).click();
-  await page.getByRole("button", { name: "Remove Reviewer 2" }).click({
+  await page.getByRole("button", { name: "Remove Producer" }).click({
     force: true,
   });
   await expect
