@@ -1,0 +1,150 @@
+# Script Authoring Workspace Architecture
+
+## Current Baseline
+
+The project starts as a copied Next.js + shadcn visual demo from:
+
+```text
+C:/MyProjects/script-format-demo-next
+```
+
+The first implementation goal is to preserve the existing Laper-like layout while replacing mock screenplay data with a real workspace model.
+
+## Main Boundaries
+
+### Domain
+
+Domain code owns screenplay concepts and pure transformations:
+
+- project
+- script
+- script block
+- scene
+- character
+- location
+- beat
+- prop
+- asset task
+- trash / project lifecycle
+
+Domain code should not import React, Prisma, Next.js, or UI components.
+
+Planned path:
+
+```text
+src/lib/domain/
+```
+
+### Persistence
+
+Persistence owns database schema and data loading/saving.
+
+Planned stack:
+
+- Docker Postgres
+- Prisma
+- Next.js server actions or route handlers
+
+Planned paths:
+
+```text
+prisma/schema.prisma
+src/lib/db/
+src/app/actions/
+```
+
+### UI
+
+UI owns the workspace shell and user interactions.
+
+Existing main file:
+
+```text
+src/components/script-forge-demo.tsx
+```
+
+This file should be split as functionality grows:
+
+```text
+src/components/workspace/app-shell.tsx
+src/components/workspace/script-editor.tsx
+src/components/workspace/sidebar.tsx
+src/components/workspace/inspector.tsx
+src/components/workspace/workbench-pages.tsx
+src/components/workspace/dialogs/
+```
+
+### State
+
+M1 uses local React state for fast functional validation.
+
+M3 moves durable state to Postgres while keeping a normalized workspace view model for rendering.
+
+## Source Of Truth
+
+Script blocks are the source of truth for:
+
+- scenes
+- characters
+- locations
+- scene statistics
+
+Manual modules:
+
+- beats
+- props
+
+Generated/mock modules:
+
+- assets
+- generation tasks
+
+Locked module:
+
+- storyboard
+
+## Core Data Flow
+
+```text
+User action
+  -> create/update/delete ScriptBlock
+  -> recalculate derived workspace view
+  -> render Sidebar / Script / Scenes / Characters / Locations
+```
+
+For persistence:
+
+```text
+Client interaction
+  -> server action
+  -> Prisma transaction
+  -> script block mutation
+  -> derived sync or view recalculation
+  -> return WorkspaceView
+```
+
+## Verification Gates
+
+Baseline:
+
+- `npm install`
+- `npm run lint`
+- `npm run build`
+
+Functional:
+
+- browser smoke tests for authoring workflow
+- derived entity assertions, either unit tests or deterministic script checks
+
+Persistence:
+
+- Docker Postgres starts
+- Prisma migration succeeds
+- refresh preserves data
+
+## Open Risks
+
+- The current visual demo is a large single component. It should be split once functional state grows.
+- Next.js 16 behavior may differ from older examples. Read local Next docs before adding server-side APIs.
+- Characters page in the reference showed inconsistent counters. Our implementation should use one derived calculation instead of reproducing that inconsistency.
+
