@@ -254,6 +254,16 @@ Beats / Props / Assets action
   -> client refreshes cards, sidebar counts, and inspector statistics
 ```
 
+Implemented persisted workbench delete flow:
+
+```text
+Beat row / Prop card / Asset card delete
+  -> server action with projectId, scriptId, and record id
+  -> Prisma deleteMany constrained to the current script
+  -> return WorkspaceSnapshot plus status message
+  -> client refreshes workbench records, sidebar counts, and inspector statistics
+```
+
 Implemented persisted collaboration flow:
 
 ```text
@@ -294,6 +304,7 @@ Persistence:
 - Seed writes deterministic workspace records
 - refresh preserves data
 - E2E tests assert Postgres rows after browser interactions
+- E2E tests assert Beat, Prop, and Asset records can be deleted from the UI and removed from Postgres.
 - E2E tests assert invite link and collaborator rows after browser interactions
 - E2E tests open the generated `/share/<token>` route and assert shared script content and reviewer state render from persisted records
 

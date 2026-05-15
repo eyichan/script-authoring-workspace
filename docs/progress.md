@@ -49,6 +49,7 @@ M2. Persistence foundation
 - Added persisted Invite / Collaboration state with project share links and collaborator records.
 - Added a read-only `/share/<token>` route for persisted invite links.
 - Fixed Enter-to-next-block editing so the current unblurred script line is committed before the next block is inserted.
+- Added persisted delete flows for Beat, Prop, and Asset workbench records.
 
 ## In Progress
 
@@ -170,6 +171,13 @@ M2. Persistence foundation
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npx prisma migrate status`: succeeded after injecting `DATABASE_URL` from `.env.local`; database schema is up to date with 2 migrations.
   - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including pressing Enter from an unblurred Scene input and verifying Postgres persisted `INT. ENTER BRIDGE - DAY` before inserting the next Action block.
+- After adding persisted Workbench deletion:
+  - `deleteBeatAction`, `deletePropAction`, and `deleteAssetAction` remove records through server actions constrained to the current script.
+  - Beat rows, Prop cards, and Asset cards now expose delete icon buttons for persisted records.
+  - `npm test`: succeeded, 9 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 5 Playwright tests passed, including creating Beat, Prop, and Asset records, refreshing to verify persistence, deleting each from the UI, and verifying the Postgres rows returned to zero.
 
 ## Decisions
 

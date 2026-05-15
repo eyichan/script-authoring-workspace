@@ -191,6 +191,30 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   expect(script.props).toHaveLength(1);
   expect(script.assetTasks).toHaveLength(1);
   expect(script.assetTasks[0]?.status).toBe("done");
+
+  await page.getByRole("button", { name: "Beats" }).click({ force: true });
+  await page.getByRole("button", { name: "Delete Beat 1: Pressure Turn" }).click({
+    force: true,
+  });
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.beats.length)
+    .toBe(0);
+
+  await page.getByRole("button", { name: "Props" }).click({ force: true });
+  await page.getByRole("button", { name: "Delete Continuity Tag 1" }).click({
+    force: true,
+  });
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.props.length)
+    .toBe(0);
+
+  await page.getByRole("button", { name: "Assets" }).click({ force: true });
+  await page.getByRole("button", { name: "Delete Imported still reference 1" }).click({
+    force: true,
+  });
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.assetTasks.length)
+    .toBe(0);
 });
 
 test("downloads a Final Draft export from persisted script blocks", async ({ page }) => {

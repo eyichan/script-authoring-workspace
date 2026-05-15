@@ -645,6 +645,69 @@ export async function importAssetSnapshot({
   };
 }
 
+export async function deleteBeatSnapshot({
+  projectId,
+  scriptId,
+  beatId,
+}: {
+  projectId: string;
+  scriptId: string;
+  beatId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const deleted = await prisma.beat.deleteMany({
+    where: { id: beatId, scriptId },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Beat removed from the persisted outline."
+      : "Beat was already removed.",
+  };
+}
+
+export async function deletePropSnapshot({
+  projectId,
+  scriptId,
+  propId,
+}: {
+  projectId: string;
+  scriptId: string;
+  propId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const deleted = await prisma.prop.deleteMany({
+    where: { id: propId, scriptId },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Prop removed from the persisted prop book."
+      : "Prop was already removed.",
+  };
+}
+
+export async function deleteAssetSnapshot({
+  projectId,
+  scriptId,
+  assetId,
+}: {
+  projectId: string;
+  scriptId: string;
+  assetId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const deleted = await prisma.assetTask.deleteMany({
+    where: { id: assetId, scriptId },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Asset reference removed from the persisted library."
+      : "Asset reference was already removed.",
+  };
+}
+
 export async function createInviteSnapshot({
   projectId,
 }: {

@@ -56,6 +56,9 @@ import {
 import {
   createBeatAction,
   createPropAction,
+  deleteAssetAction,
+  deleteBeatAction,
+  deletePropAction,
   importAssetAction,
 } from "@/app/actions/workbench";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -127,6 +130,11 @@ type PageName =
   | "Assets";
 type WorkbenchPageName = Exclude<PageName, "Script" | "Beats" | "Storyboard">;
 type BlockInputElement = HTMLInputElement | HTMLTextAreaElement;
+type WorkbenchCard = {
+  id: string;
+  title: string;
+  persisted: boolean;
+};
 
 const navItems = [
   { label: "Script", icon: FileText },
@@ -593,12 +601,32 @@ export function ScriptForgeDemo({
     setPendingFocusBlockId(null);
   }, [blocks, pendingFocusBlockId]);
 
-  const dynamicCards: Record<WorkbenchPageName, string[]> = {
-    Characters: derived.characters.map((character) => character.displayName),
-    Props: props.map((prop) => prop.name),
-    Locations: derived.locations.map((location) => location.displayName),
-    Scenes: derived.scenes.map((scene) => scene.heading),
-    Assets: assetTasks.map((task) => task.title),
+  const dynamicCards: Record<WorkbenchPageName, WorkbenchCard[]> = {
+    Characters: derived.characters.map((character) => ({
+      id: character.id,
+      title: character.displayName,
+      persisted: false,
+    })),
+    Props: props.map((prop) => ({
+      id: prop.id,
+      title: prop.name,
+      persisted: true,
+    })),
+    Locations: derived.locations.map((location) => ({
+      id: location.id,
+      title: location.displayName,
+      persisted: false,
+    })),
+    Scenes: derived.scenes.map((scene) => ({
+      id: scene.id,
+      title: scene.heading,
+      persisted: false,
+    })),
+    Assets: assetTasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      persisted: true,
+    })),
   };
   const workbenchCount =
     isWorkbenchPage(activePage)
@@ -871,6 +899,39 @@ export function ScriptForgeDemo({
         scriptId: script.id,
       }),
     );
+  };
+
+  const handleDeleteBeat = (beatId: string) => {
+    void runWorkbenchMutation(() =>
+      deleteBeatAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+        beatId,
+      }),
+    );
+  };
+
+  const handleDeleteWorkbenchCard = (page: WorkbenchPageName, id: string) => {
+    if (page === "Props") {
+      void runWorkbenchMutation(() =>
+        deletePropAction({
+          projectId: activeProject.id,
+          scriptId: script.id,
+          propId: id,
+        }),
+      );
+      return;
+    }
+
+    if (page === "Assets") {
+      void runWorkbenchMutation(() =>
+        deleteAssetAction({
+          projectId: activeProject.id,
+          scriptId: script.id,
+          assetId: id,
+        }),
+      );
+    }
   };
 
   const handleCreateProject = () => {
@@ -1164,7 +1225,12 @@ export function ScriptForgeDemo({
             {activePage === "Storyboard" ? (
               <LockedStoryboard />
             ) : activePage === "Beats" ? (
-              <BeatsPage beats={beats} message={workbenchMessage} />
+              <BeatsPage
+                beats={beats}
+                message={workbenchMessage}
+                mutationPending={workbenchMutationPending}
+                onDeleteBeat={handleDeleteBeat}
+              />
             ) : !editorMode ? (
               <WorkbenchPage
                 page={activePage}
@@ -1181,6 +1247,10 @@ export function ScriptForgeDemo({
                 }
                 cards={dynamicCards[activePage]}
                 scenes={derived.scenes}
+                mutationPending={workbenchMutationPending}
+                onDeleteCard={(id) =>
+                  handleDeleteWorkbenchCard(activePage as WorkbenchPageName, id)
+                }
               />
             ) : editorTab === "cover" ? (
               <CoverPreview />
@@ -1817,9 +1887,13 @@ function WorkbenchTabs({
 function BeatsPage({
   beats,
   message,
+  mutationPending,
+  onDeleteBeat,
 }: {
   beats: Beat[];
   message: string;
+  mutationPending: boolean;
+  onDeleteBeat: (beatId: string) => void;
 }) {
   return (
     <div className="relative min-h-[669px] px-6 py-6">
@@ -1828,7 +1902,7 @@ function BeatsPage({
           {beats.map((beat, index) => (
             <div
               key={beat.id}
-              className="grid grid-cols-[44px_minmax(0,1fr)_76px] items-center gap-3 border-b border-[#eeeeea] px-4 py-3 text-[13px] last:border-b-0"
+              className="grid grid-cols-[44px_minmax(0,1fr)_76px_32px] items-center gap-3 border-b border-[#eeeeea] px-4 py-3 text-[13px] last:border-b-0"
             >
               <span className="text-[#8b8b84]">#{index + 1}</span>
               <div className="min-w-0">
@@ -1840,6 +1914,17 @@ function BeatsPage({
                 </span>
               </div>
               <Badge variant="secondary">{beat.durationMinutes} min</Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled={mutationPending}
+                aria-label={`Delete ${beat.title}`}
+                onClick={() => onDeleteBeat(beat.id)}
+                className="size-8 rounded-full text-[#8d938f] hover:bg-[#f1f4f2] hover:text-[#b0473e] active:translate-y-0"
+              >
+                <Trash2 className="size-4" />
+              </Button>
             </div>
           ))}
         </div>
@@ -1871,6 +1956,8 @@ function WorkbenchPage({
   onGenerateStill,
   cards,
   scenes,
+  mutationPending,
+  onDeleteCard,
 }: {
   page: WorkbenchPageName;
   activeTab: string;
@@ -1878,15 +1965,22 @@ function WorkbenchPage({
   message: string;
   generatedStills: string[];
   onGenerateStill: (sceneId: string) => void;
-  cards: string[];
+  cards: WorkbenchCard[];
   scenes: DerivedScene[];
+  mutationPending: boolean;
+  onDeleteCard: (id: string) => void;
 }) {
   const config = workbenchConfig[page];
   const isScenes = page === "Scenes";
   const extraCards = Array.from({ length: additions }, (_, index) =>
-    page === "Assets"
-      ? `Imported reference ${index + 1}`
-      : `${config.action} draft ${index + 1}`,
+    ({
+      id: `draft-${page}-${index + 1}`,
+      title:
+        page === "Assets"
+          ? `Imported reference ${index + 1}`
+          : `${config.action} draft ${index + 1}`,
+      persisted: false,
+    }),
   );
   const displayCards = [...cards, ...extraCards];
   const filteredCards =
@@ -1894,8 +1988,8 @@ function WorkbenchPage({
       ? displayCards
       : displayCards.filter((card) =>
           activeTab === "Videos"
-            ? card.toLowerCase().includes("video")
-            : !card.toLowerCase().includes("video"),
+            ? card.title.toLowerCase().includes("video")
+            : !card.title.toLowerCase().includes("video"),
         );
 
   return (
@@ -1976,9 +2070,9 @@ function WorkbenchPage({
         )
       ) : activeTab === "Overview" || page === "Assets" ? (
         <div className="grid grid-cols-3 gap-4 max-[1200px]:grid-cols-2">
-          {filteredCards.map((card, index) => (
+          {filteredCards.map((card) => (
             <div
-              key={`${card}-${index}`}
+              key={card.id}
               className="min-h-[150px] rounded-xl border border-[#deded8] bg-[#fcfdfc] p-4 shadow-[0_8px_24px_rgb(42_42_37/0.07)]"
             >
               <div className="mb-4 flex items-center justify-between">
@@ -1993,11 +2087,26 @@ function WorkbenchPage({
                     <ImageIcon className="size-5" />
                   )}
                 </div>
-                <Badge variant="secondary">
-                  {index < cards.length ? "Extracted" : "Draft"}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="secondary">
+                    {card.persisted ? "Persisted" : "Draft"}
+                  </Badge>
+                  {(page === "Props" || page === "Assets") && card.persisted ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={mutationPending}
+                      aria-label={`Delete ${card.title}`}
+                      onClick={() => onDeleteCard(card.id)}
+                      className="rounded-full text-[#8d938f] hover:bg-[#f1f4f2] hover:text-[#b0473e] active:translate-y-0"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-              <h3 className="text-[16px] font-medium leading-6">{card}</h3>
+              <h3 className="text-[16px] font-medium leading-6">{card.title}</h3>
               <p className="mt-2 text-[13px] leading-5 text-[#777771]">
                 {page === "Assets"
                   ? "Linked to scene production and export history."
