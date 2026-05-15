@@ -124,6 +124,7 @@ src/components/workspace/inspector-panel.tsx
 src/components/workspace/project-library.tsx
 src/components/workspace/script-editor-canvas.tsx
 src/components/workspace/workspace-sidebar.tsx
+src/components/workspace/workspace-headers.tsx
 src/components/workspace/workbench-pages.tsx
 ```
 
@@ -350,7 +351,7 @@ Persistence:
 
 ## Open Risks
 
-- The current workspace shell still owns broad state and page orchestration. Continue splitting shell/header boundaries when future changes touch those areas.
+- The current workspace shell still owns broad state and page orchestration. Continue splitting orchestration boundaries when future changes touch those areas.
 - Next.js 16 behavior may differ from older examples. Read local Next docs before adding server-side APIs.
 - Characters page in the reference showed inconsistent counters. Our implementation should use one derived calculation instead of reproducing that inconsistency.
 - Domain behavior is currently verified by TypeScript build only. Add unit tests or deterministic assertion scripts before the sync logic becomes more complex.
