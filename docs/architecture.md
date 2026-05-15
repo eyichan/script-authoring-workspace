@@ -79,6 +79,7 @@ docker-compose.yml
 src/lib/db/prisma.ts
 src/lib/db/workspace.ts
 src/app/actions/projects.ts
+src/app/actions/script-blocks.ts
 ```
 
 Planned paths:
@@ -98,6 +99,7 @@ Current persistence behavior:
 - `prisma/seed.ts` upserts the deterministic local seed workspace into Postgres without deleting existing records.
 - `src/lib/db/workspace.ts` maps Prisma records into the domain `WorkspaceView` shape and derives scenes, characters, and locations from persisted script blocks.
 - `src/app/actions/projects.ts` persists project create, open, trash, and restore flows through server actions.
+- `src/app/actions/script-blocks.ts` persists script block insert, text update, duplicate, delete, and resequencing flows through server actions.
 
 ### UI
 
@@ -208,8 +210,19 @@ Client interaction
   -> server action
   -> Prisma transaction
   -> script block mutation
-  -> derived sync or view recalculation
-  -> return WorkspaceView
+  -> derived view recalculation from persisted ScriptBlock rows
+  -> return WorkspaceSnapshot
+```
+
+Implemented persisted script block flow:
+
+```text
+Floating toolbar click / context menu action / input blur
+  -> server action
+  -> Prisma mutation
+  -> script block position resequencing when needed
+  -> return WorkspaceSnapshot plus activeBlockId
+  -> client refreshes local render state and focuses the returned block
 ```
 
 ## Verification Gates

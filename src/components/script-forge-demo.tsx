@@ -45,6 +45,12 @@ import {
   restoreProjectAction,
   trashProjectAction,
 } from "@/app/actions/projects";
+import {
+  deleteScriptBlockAction,
+  duplicateScriptBlockAction,
+  insertScriptBlockAction,
+  updateScriptBlockAction,
+} from "@/app/actions/script-blocks";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,9 +82,6 @@ import {
   getTrashedProjects,
 } from "@/lib/domain/projects";
 import {
-  deleteScriptBlock,
-  duplicateScriptBlock,
-  insertScriptBlockAfter,
   updateScriptBlockText,
 } from "@/lib/domain/script-blocks";
 import { seedWorkspace } from "@/lib/domain/seed";
@@ -367,6 +370,16 @@ type ScriptForgeDemoProps = {
   persistenceLabel?: string;
 };
 
+type WorkspaceSnapshotPayload = {
+  projects: Project[];
+  workspace: WorkspaceView;
+  activeProjectId: string;
+};
+
+type ScriptMutationPayload = WorkspaceSnapshotPayload & {
+  activeBlockId?: string;
+};
+
 export function ScriptForgeDemo({
   initialActiveProjectId,
   initialProjects,
@@ -423,6 +436,7 @@ export function ScriptForgeDemo({
   );
   const [generatedStills, setGeneratedStills] = useState<string[]>([]);
   const [projectMutationPending, setProjectMutationPending] = useState(false);
+  const [scriptMutationPending, setScriptMutationPending] = useState(false);
   const editorMode = activePage === "Script";
   const activeProject =
     projects.find((project) => project.id === activeProjectId) ??
@@ -430,42 +444,44 @@ export function ScriptForgeDemo({
   const activeProjects = useMemo(() => getActiveProjects(projects), [projects]);
   const trashedProjects = useMemo(() => getTrashedProjects(projects), [projects]);
 
-  const applyWorkspace = (workspace: WorkspaceView) => {
+  const applyWorkspace = (
+    workspace: WorkspaceView,
+    options: { focusBlockId?: string | null; resetView?: boolean } = {},
+  ) => {
     setScript(workspace.script);
     setBlocks(workspace.blocks);
     setBeats(workspace.beats);
     setProps(workspace.props);
     setAssetTasks(workspace.assetTasks);
     setActiveProjectId(workspace.project.id);
-    setActivePage("Script");
-    setEditorTab("script");
     setSceneDrafts({});
     setActiveScene(workspace.scenes[0]?.id ?? "");
-    setActiveBlockId(workspace.blocks.at(-1)?.id ?? "");
-    setPendingFocusBlockId(workspace.blocks.at(-1)?.id ?? null);
+    if (options.resetView) {
+      setActivePage("Script");
+      setEditorTab("script");
+    }
+    if (options.focusBlockId !== undefined) {
+      setActiveBlockId(options.focusBlockId ?? "");
+      setPendingFocusBlockId(options.focusBlockId);
+    }
     nextBlockNumber.current = workspace.blocks.length + 1;
     nextBeatNumber.current = workspace.beats.length + 1;
     nextPropNumber.current = workspace.props.length + 1;
     nextAssetNumber.current = workspace.assetTasks.length + 1;
   };
 
-  const applySnapshot = (snapshot: {
-    projects: Project[];
-    workspace: WorkspaceView;
-    activeProjectId: string;
-  }) => {
+  const applySnapshot = (snapshot: WorkspaceSnapshotPayload) => {
     setProjects(snapshot.projects);
-    applyWorkspace(snapshot.workspace);
+    applyWorkspace(snapshot.workspace, {
+      focusBlockId: snapshot.workspace.blocks.at(-1)?.id ?? null,
+      resetView: true,
+    });
     setActiveProjectId(snapshot.activeProjectId);
     setWorkspaceMode("workspace");
   };
 
   const runProjectMutation = async (
-    operation: () => Promise<{
-      projects: Project[];
-      workspace: WorkspaceView;
-      activeProjectId: string;
-    }>,
+    operation: () => Promise<WorkspaceSnapshotPayload>,
   ) => {
     if (projectMutationPending) return;
 
@@ -475,6 +491,29 @@ export function ScriptForgeDemo({
       applySnapshot(snapshot);
     } finally {
       setProjectMutationPending(false);
+    }
+  };
+
+  const runScriptMutation = async (
+    operation: () => Promise<ScriptMutationPayload>,
+    options: { focusReturnedBlock?: boolean } = {},
+  ) => {
+    if (scriptMutationPending) return;
+
+    setScriptMutationPending(true);
+    try {
+      const snapshot = await operation();
+      setProjects(snapshot.projects);
+      applyWorkspace(snapshot.workspace, {
+        focusBlockId: options.focusReturnedBlock
+          ? snapshot.activeBlockId ?? null
+          : undefined,
+      });
+      if (snapshot.activeBlockId) {
+        setActiveBlockId(snapshot.activeBlockId);
+      }
+    } finally {
+      setScriptMutationPending(false);
     }
   };
 
@@ -587,27 +626,18 @@ export function ScriptForgeDemo({
 
   const handleInsertScriptBlock = (tool: ToolLabel, afterBlockId = activeBlockId) => {
     const type = toolToBlockType[tool];
-    const sequence = nextBlockNumber.current;
-    nextBlockNumber.current += 1;
-    const id = `block-local-${sequence}`;
-    const timestamp = `local-draft-${sequence}`;
-
-    setBlocks((current) => {
-      const nextBlock: ScriptBlock = {
-        id,
-        scriptId: script.id,
-        type,
-        text: "",
-        position: 0,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      };
-
-      return insertScriptBlockAfter(current, nextBlock, afterBlockId);
-    });
-    setActiveBlockId(id);
-    setPendingFocusBlockId(id);
     setActiveTool(tool);
+
+    void runScriptMutation(
+      () =>
+        insertScriptBlockAction({
+          projectId: activeProject.id,
+          scriptId: script.id,
+          type,
+          afterBlockId: afterBlockId || undefined,
+        }),
+      { focusReturnedBlock: true },
+    );
   };
 
   const handleUpdateScriptBlock = (id: string, value: string) => {
@@ -622,6 +652,16 @@ export function ScriptForgeDemo({
         `local-edit-${nextRevisionNumber.current++}`,
       );
     });
+  };
+
+  const handlePersistScriptBlockText = (blockId: string, text: string) => {
+    void runScriptMutation(() =>
+      updateScriptBlockAction({
+        projectId: activeProject.id,
+        blockId,
+        text,
+      }),
+    );
   };
 
   const handleBlockKeyDown = (
@@ -647,59 +687,27 @@ export function ScriptForgeDemo({
   };
 
   const handleDuplicateScriptBlock = (block: ScriptBlock) => {
-    const sequence = nextBlockNumber.current;
-    nextBlockNumber.current += 1;
-    const id = `block-local-${sequence}`;
-    const timestamp = `local-draft-${sequence}`;
-    const duplicate: ScriptBlock = {
-      ...block,
-      id,
-      position: 0,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-
-    setBlocks((current) => duplicateScriptBlock(current, block.id, duplicate));
-
-    if (block.type === "scene") {
-      setSceneDrafts((current) => ({
-        ...current,
-        [id]: current[block.id] ?? getSceneDraft(block.text),
-      }));
-      setActiveScene(`scene-${id}`);
-    }
-    setActiveBlockId(id);
-    setPendingFocusBlockId(id);
     setActiveTool(blockTypeToTool[block.type]);
+
+    void runScriptMutation(
+      () =>
+        duplicateScriptBlockAction({
+          projectId: activeProject.id,
+          blockId: block.id,
+        }),
+      { focusReturnedBlock: true },
+    );
   };
 
   const handleDeleteScriptBlock = (block: ScriptBlock) => {
-    const orderedBlocks = [...blocks].sort((a, b) => a.position - b.position);
-    const blockIndex = orderedBlocks.findIndex((item) => item.id === block.id);
-    const fallbackBlock =
-      orderedBlocks[blockIndex + 1] ?? orderedBlocks[blockIndex - 1] ?? null;
-
-    setBlocks((current) => deleteScriptBlock(current, block.id));
-    setSceneDrafts((current) => {
-      const nextDrafts = { ...current };
-      delete nextDrafts[block.id];
-      return nextDrafts;
-    });
-
-    if (fallbackBlock) {
-      setActiveBlockId(fallbackBlock.id);
-      setPendingFocusBlockId(fallbackBlock.id);
-      if (fallbackBlock.type === "scene") {
-        setActiveScene(`scene-${fallbackBlock.id}`);
-      } else if (block.type === "scene") {
-        setActiveScene("");
-      }
-      setActiveTool(blockTypeToTool[fallbackBlock.type]);
-      return;
-    }
-
-    setActiveBlockId("");
-    setActiveScene("");
+    void runScriptMutation(
+      () =>
+        deleteScriptBlockAction({
+          projectId: activeProject.id,
+          blockId: block.id,
+        }),
+      { focusReturnedBlock: true },
+    );
   };
 
   const withBlockMenu = (block: ScriptBlock, children: ReactNode) => (
@@ -734,6 +742,7 @@ export function ScriptForgeDemo({
   const handleScenePartChange = (
     block: ScriptBlock,
     patch: Partial<SceneHeadingParts>,
+    persist = false,
   ) => {
     const nextScene = {
       ...(sceneDrafts[block.id] ?? getSceneDraft(block.text)),
@@ -746,6 +755,9 @@ export function ScriptForgeDemo({
       [block.id]: nextScene,
     }));
     handleUpdateScriptBlock(block.id, nextText);
+    if (persist) {
+      handlePersistScriptBlockText(block.id, nextText);
+    }
     if (nextText) {
       setActiveScene(`scene-${block.id}`);
     }
@@ -1096,6 +1108,7 @@ export function ScriptForgeDemo({
                   <Tooltip key={tool.label}>
                     <TooltipTrigger
                       type="button"
+                      disabled={scriptMutationPending}
                       onClick={() => handleInsertScriptBlock(tool.label)}
                       className={cn(
                         "relative grid h-[45px] w-[62px] shrink-0 justify-items-center gap-0.5 rounded-full bg-transparent px-2 py-1.5 text-[11px] font-normal text-[#6b7370] transition-[background-color,color] duration-150 hover:bg-[#f0f3f1]",
@@ -1128,7 +1141,9 @@ export function ScriptForgeDemo({
                               <button
                                 key={prefix}
                                 type="button"
-                                onClick={() => handleScenePartChange(block, { prefix })}
+                                onClick={() =>
+                                  handleScenePartChange(block, { prefix }, true)
+                                }
                                 className={cn(
                                   "h-7 px-2 text-[13px] text-[#747c78] transition-colors hover:bg-white",
                                   scene.prefix === prefix &&
@@ -1161,6 +1176,9 @@ export function ScriptForgeDemo({
                                 locationName: event.target.value,
                               })
                             }
+                            onBlur={() =>
+                              handlePersistScriptBlockText(block.id, block.text)
+                            }
                             onKeyDown={(event) => handleBlockKeyDown(block, event)}
                             className="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
                           />
@@ -1170,7 +1188,9 @@ export function ScriptForgeDemo({
                               <button
                                 key={timeOfDay}
                                 type="button"
-                                onClick={() => handleScenePartChange(block, { timeOfDay })}
+                                onClick={() =>
+                                  handleScenePartChange(block, { timeOfDay }, true)
+                                }
                                 className={cn(
                                   "h-7 px-2 text-[13px] text-[#747c78] transition-colors hover:bg-white",
                                   scene.timeOfDay === timeOfDay &&
@@ -1212,6 +1232,9 @@ export function ScriptForgeDemo({
                             }}
                             onChange={(event) =>
                               handleUpdateScriptBlock(block.id, event.target.value)
+                            }
+                            onBlur={(event) =>
+                              handlePersistScriptBlockText(block.id, event.target.value)
                             }
                             onKeyDown={(event) => handleBlockKeyDown(block, event)}
                             className="block w-full border-0 bg-transparent p-0 text-center font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
@@ -1256,6 +1279,9 @@ export function ScriptForgeDemo({
                             handleUpdateScriptBlock(block.id, event.target.value);
                             resizeBlockInput(event.target);
                           }}
+                          onBlur={(event) =>
+                            handlePersistScriptBlockText(block.id, event.target.value)
+                          }
                           onInput={(event) => resizeBlockInput(event.currentTarget)}
                           onKeyDown={(event) => handleBlockKeyDown(block, event)}
                           className={cn(

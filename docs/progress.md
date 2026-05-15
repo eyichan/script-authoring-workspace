@@ -42,6 +42,7 @@ M2. Persistence foundation
 - Added server-side workspace loading from Postgres into the existing domain `WorkspaceView`.
 - Replaced Recents project create, open, delete-to-trash, and restore with database-backed server actions.
 - Added `.env.example` to Git while keeping `.env.local` ignored for local runtime credentials.
+- Added database-backed script block insert, blur-save text update, duplicate, delete, and position resequencing.
 
 ## In Progress
 
@@ -49,11 +50,10 @@ M2. Persistence foundation
 
 ## Next
 
-1. Add server actions for script block insert, edit, duplicate, delete, and resequencing.
-2. Preserve the existing direct-on-canvas insertion interaction while moving script mutations to the database.
-3. Persist manual Beats, Props, and Assets module mutations.
-4. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, and refresh persistence.
-5. Add export/share/collaboration product states after persistence-backed editing is stable.
+1. Persist manual Beats, Props, and Assets module mutations.
+2. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, and refresh persistence.
+3. Add export/share/collaboration product states after persistence-backed editing is stable.
+4. Split the large workspace component once persistence behavior stabilizes.
 
 ## Verification Log
 
@@ -115,6 +115,12 @@ M2. Persistence foundation
   - `npx prisma migrate status`: succeeded; database schema is up to date.
   - Browser smoke test on `http://localhost:3001`: opened Recents, created `Untitled Script 2`, verified Active Projects became 2, deleted it to Trash, verified Trash became 1, restored it, refreshed the page, and verified Active Projects remained 2 and Trash returned to 0 from Postgres-backed initial loading.
   - Database verification query returned 2 active projects, 0 trashed projects, and 2 scripts after the smoke test.
+- After wiring database-backed script block mutations:
+  - `npm test`: succeeded, 6 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
+  - Browser smoke test on `http://localhost:3001`: added a Scene block from the floating toolbar, typed `orbital gate`, blurred the field to save, refreshed, and verified the sidebar still showed `1. INT ORBITAL GATE - DAY`.
+  - Right-click smoke test duplicated that scene block and database verification showed two rows with positions 1 and 2; deleting the duplicate via the context menu returned the database to one row at position 1.
 
 ## Decisions
 

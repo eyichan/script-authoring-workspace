@@ -14,6 +14,7 @@ import type {
   Project,
   Script,
   ScriptBlock,
+  ScriptBlockType,
   WorkspaceView,
 } from "@/lib/domain/types";
 
@@ -23,6 +24,10 @@ export type WorkspaceSnapshot = {
   projects: Project[];
   workspace: WorkspaceView;
   activeProjectId: string;
+};
+
+export type ScriptMutationSnapshot = WorkspaceSnapshot & {
+  activeBlockId?: string;
 };
 
 const projectInclude = {
@@ -195,6 +200,25 @@ async function createWorkspaceProject(title: string) {
   return projectId;
 }
 
+async function resequenceScriptBlocks(
+  tx: Prisma.TransactionClient,
+  blockIds: string[],
+) {
+  for (const [index, id] of blockIds.entries()) {
+    await tx.scriptBlock.update({
+      where: { id },
+      data: { position: -(index + 1) },
+    });
+  }
+
+  for (const [index, id] of blockIds.entries()) {
+    await tx.scriptBlock.update({
+      where: { id },
+      data: { position: index + 1 },
+    });
+  }
+}
+
 async function ensureActiveProjectId(preferredProjectId?: string) {
   if (preferredProjectId) {
     const preferred = await prisma.project.findFirst({
@@ -269,4 +293,146 @@ export async function restoreProjectSnapshot(
   });
 
   return getWorkspaceSnapshot(projectId);
+}
+
+export async function insertScriptBlockSnapshot({
+  projectId,
+  scriptId,
+  type,
+  afterBlockId,
+}: {
+  projectId: string;
+  scriptId: string;
+  type: ScriptBlockType;
+  afterBlockId?: string;
+}): Promise<ScriptMutationSnapshot> {
+  const blockId = `block-${randomUUID()}`;
+
+  await prisma.$transaction(async (tx) => {
+    const blocks = await tx.scriptBlock.findMany({
+      where: { scriptId },
+      orderBy: { position: "asc" },
+      select: { id: true },
+    });
+    const afterIndex = afterBlockId
+      ? blocks.findIndex((block) => block.id === afterBlockId)
+      : blocks.length - 1;
+    const insertIndex = afterIndex >= 0 ? afterIndex + 1 : blocks.length;
+
+    await tx.scriptBlock.create({
+      data: {
+        id: blockId,
+        scriptId,
+        type,
+        text: "",
+        position: blocks.length + 1,
+      },
+    });
+
+    const orderedIds = blocks.map((block) => block.id);
+    orderedIds.splice(insertIndex, 0, blockId);
+    await resequenceScriptBlocks(tx, orderedIds);
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    activeBlockId: blockId,
+  };
+}
+
+export async function updateScriptBlockSnapshot({
+  projectId,
+  blockId,
+  text,
+}: {
+  projectId: string;
+  blockId: string;
+  text: string;
+}): Promise<ScriptMutationSnapshot> {
+  await prisma.scriptBlock.update({
+    where: { id: blockId },
+    data: { text },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    activeBlockId: blockId,
+  };
+}
+
+export async function duplicateScriptBlockSnapshot({
+  projectId,
+  blockId,
+}: {
+  projectId: string;
+  blockId: string;
+}): Promise<ScriptMutationSnapshot> {
+  const duplicateId = `block-${randomUUID()}`;
+
+  await prisma.$transaction(async (tx) => {
+    const source = await tx.scriptBlock.findUniqueOrThrow({
+      where: { id: blockId },
+    });
+    const blocks = await tx.scriptBlock.findMany({
+      where: { scriptId: source.scriptId },
+      orderBy: { position: "asc" },
+      select: { id: true },
+    });
+    const sourceIndex = blocks.findIndex((block) => block.id === blockId);
+
+    await tx.scriptBlock.create({
+      data: {
+        id: duplicateId,
+        scriptId: source.scriptId,
+        type: source.type,
+        text: source.text,
+        position: blocks.length + 1,
+      },
+    });
+
+    const orderedIds = blocks.map((block) => block.id);
+    orderedIds.splice(sourceIndex + 1, 0, duplicateId);
+    await resequenceScriptBlocks(tx, orderedIds);
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    activeBlockId: duplicateId,
+  };
+}
+
+export async function deleteScriptBlockSnapshot({
+  projectId,
+  blockId,
+}: {
+  projectId: string;
+  blockId: string;
+}): Promise<ScriptMutationSnapshot> {
+  let fallbackBlockId: string | undefined;
+
+  await prisma.$transaction(async (tx) => {
+    const source = await tx.scriptBlock.findUniqueOrThrow({
+      where: { id: blockId },
+      select: { scriptId: true },
+    });
+    const blocks = await tx.scriptBlock.findMany({
+      where: { scriptId: source.scriptId },
+      orderBy: { position: "asc" },
+      select: { id: true },
+    });
+    const sourceIndex = blocks.findIndex((block) => block.id === blockId);
+    const remainingIds = blocks
+      .filter((block) => block.id !== blockId)
+      .map((block) => block.id);
+    fallbackBlockId =
+      remainingIds[sourceIndex] ?? remainingIds[sourceIndex - 1] ?? undefined;
+
+    await tx.scriptBlock.delete({ where: { id: blockId } });
+    await resequenceScriptBlocks(tx, remainingIds);
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    activeBlockId: fallbackBlockId,
+  };
 }
