@@ -113,7 +113,7 @@ test("persists project create, trash, and restore", async ({ page }) => {
 
   await page.getByLabel("Home").click();
   await page.getByRole("button", { name: "Restore" }).first().click({ force: true });
-  await expect(page.getByRole("heading", { name: "Recents" })).toBeVisible();
+  await expect(page.getByLabel("Project title")).toHaveValue("Renamed E2E Project");
 
   await expect.poll(async () => (await projectStatus(created.id)).status).toBe("active");
   const restored = await projectStatus(created.id);
@@ -318,6 +318,21 @@ test("downloads a Final Draft export from persisted script blocks", async ({ pag
   const content = await readFile(path!, "utf8");
   expect(content).toContain("<FinalDraft");
   expect(content).toContain("INT. EXPORT BAY - DAY");
+
+  await page.getByRole("tab", { name: "Info" }).click();
+  await clickButtonByText(page, "PDF");
+  const pdfDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export PDF" }).click({ force: true });
+  const pdfDownload = await pdfDownloadPromise;
+
+  expect(pdfDownload.suggestedFilename()).toMatch(/untitled-script-\d+\.pdf/);
+
+  const pdfPath = await pdfDownload.path();
+  expect(pdfPath).toBeTruthy();
+
+  const pdfContent = await readFile(pdfPath!, "utf8");
+  expect(pdfContent).toMatch(/^%PDF-1\.4/);
+  expect(pdfContent).toContain("INT. EXPORT BAY - DAY");
 });
 
 test("manages persisted invite links and reviewer state", async ({ page }) => {
@@ -390,6 +405,7 @@ test("manages persisted invite links and reviewer state", async ({ page }) => {
     .getByRole("button", { name: "Open" })
     .click({ force: true });
   await page.getByRole("tab", { name: "Collaboration" }).click();
+  await expect(page.getByText(`/share/${shareToken}`)).toBeVisible();
   await page.getByRole("button", { name: "Remove Producer" }).click({
     force: true,
   });
@@ -403,6 +419,7 @@ test("manages persisted invite links and reviewer state", async ({ page }) => {
     })
     .toEqual(["Owner"]);
 
+  await expect(page.getByText(`/share/${shareToken}`)).toBeVisible();
   await page.getByRole("button", { name: "Revoke" }).click({ force: true });
   await expect
     .poll(async () => {

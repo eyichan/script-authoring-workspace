@@ -45,7 +45,7 @@ M5. Product verification and hardening
 - Added database-backed script block insert, blur-save text update, duplicate, delete, and position resequencing.
 - Added database-backed Beats, Props, and Assets creation/import actions.
 - Added Playwright E2E coverage for project lifecycle, script block persistence, and Workbench persistence.
-- Added real script export downloads for FDX, Fountain, and printable HTML packages.
+- Added real script export downloads for FDX, Fountain, and native PDF packages.
 - Added persisted Invite / Collaboration state with project share links and collaborator records.
 - Added a read-only `/share/<token>` route for persisted invite links.
 - Fixed Enter-to-next-block editing so the current unblurred script line is committed before the next block is inserted.
@@ -64,7 +64,7 @@ M5. Product verification and hardening
 ## Next
 
 1. Split the large workspace component once persistence behavior stabilizes.
-2. Add native binary PDF export if browser-printable HTML is not sufficient.
+2. Improve PDF pagination and screenplay layout fidelity if export quality becomes a product priority.
 3. Expand E2E for share permission edge cases and any component split that changes workflow wiring.
 4. Continue splitting the script editor/workbench modules when implementation work touches those areas.
 
@@ -152,6 +152,17 @@ M5. Product verification and hardening
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
   - `npm run test:e2e`: succeeded; 3 Playwright tests passed, including downloading a Final Draft export from persisted script blocks and verifying the `.fdx` file content contains `INT. EXPORT BAY - DAY`.
+- After adding native PDF export:
+  - `formatNativePdf` generates a lightweight PDF 1.4 document from ordered script blocks.
+  - `buildScriptExport("pdf", ...)` now downloads `<script-title>.pdf` with `application/pdf`.
+  - Unit coverage asserts the PDF header, catalog object, script text, and `startxref` trailer.
+  - E2E export coverage downloads PDF after FDX and verifies the file header and persisted scene text.
+  - Enter-to-next-block now reads the current DOM input value before the mutation and skips the matching blur persist, preventing stale blur writes from overwriting a just-committed script line.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
+  - `npm run test:e2e`: succeeded; 6 Playwright tests passed, including native PDF download and the Character -> Dialogue -> Character authoring flow.
+  - `npx prisma migrate status`: succeeded after injecting `DATABASE_URL` from `.env.local`; database schema is up to date with 2 migrations.
 - After adding persisted collaboration state:
   - `npx prisma migrate dev --name collaboration_state`: succeeded and created the `ProjectShare` and `ProjectCollaborator` tables.
   - `npm run db:generate`: succeeded.
@@ -242,5 +253,5 @@ M5. Product verification and hardening
 - Use Prisma 7 with `@prisma/adapter-pg`; do not use a bare `new PrismaClient()` in app code or seed scripts.
 - Use `127.0.0.1` for the local Docker Postgres connection string on this host.
 - Keep `.env.local` untracked; commit `.env.example` so the database URL contract is recoverable in later sessions.
-- Treat PDF as printable HTML until a native PDF renderer is selected; do not label that path as binary PDF output.
+- Use the lightweight domain PDF generator for native PDF downloads; reserve richer pagination and layout rendering for a later export-hardening slice.
 - Collaboration covers persisted invite/share state, reviewer removal, and share revocation, not real-time multiplayer editing.

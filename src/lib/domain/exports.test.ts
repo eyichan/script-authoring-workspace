@@ -5,6 +5,7 @@ import {
   buildScriptExport,
   formatFinalDraftXml,
   formatFountain,
+  formatNativePdf,
 } from "./exports";
 import type { ScriptBlock } from "./types";
 
@@ -70,11 +71,21 @@ describe("script exports", () => {
   it("builds export packages with useful filenames and mime types", () => {
     const fdx = buildScriptExport("fdx", "Pilot Draft", blocks);
     const fountain = buildScriptExport("fountain", "Pilot Draft", blocks);
-    const printable = buildScriptExport("pdf", "Pilot Draft", blocks);
+    const pdf = buildScriptExport("pdf", "Pilot Draft", blocks);
 
     assert.equal(fdx.filename, "pilot-draft.fdx");
     assert.equal(fountain.filename, "pilot-draft.fountain");
-    assert.equal(printable.filename, "pilot-draft-print.html");
+    assert.equal(pdf.filename, "pilot-draft.pdf");
     assert.equal(fdx.mimeType, "application/xml;charset=utf-8");
+    assert.equal(pdf.mimeType, "application/pdf");
+  });
+
+  it("formats a native PDF document", () => {
+    const pdf = formatNativePdf("Pilot Draft", blocks);
+
+    assert.match(pdf, /^%PDF-1\.4/);
+    assert.match(pdf, /\/Type \/Catalog/);
+    assert.match(pdf, /INT\. TEST ROOM - DAY/);
+    assert.match(pdf, /startxref\n\d+\n%%EOF/);
   });
 });

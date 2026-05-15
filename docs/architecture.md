@@ -52,7 +52,7 @@ Current domain behavior:
 - `deriveScriptEntities` derives scenes, characters, locations, character references, scene dialogue counts, and location character references from ordered script blocks.
 - `script-blocks.ts` owns pure insert, update, duplicate, delete, and position resequencing operations for script blocks.
 - `projects.ts` owns pure local project creation, trash, restore, and active/trashed filtering operations.
-- `exports.ts` owns pure FDX, Fountain, and printable HTML export package formatting from ordered script blocks.
+- `exports.ts` owns pure FDX, Fountain, and lightweight native PDF export package formatting from ordered script blocks.
 - `seedWorkspace` provides a deterministic local workspace for the first functional integration pass.
 
 ### Persistence
@@ -153,7 +153,7 @@ Current UI behavior:
 - Storyboard remains a locked module and reuses the unavailable-module visual pattern.
 - Home opens a local Recents project library with Active and Trash sections.
 - Projects support local create, open, delete-to-trash, restore, and right-click project actions.
-- The inspector export action downloads a real script package from current persisted script blocks. FDX and Fountain are file exports; PDF currently downloads a printable HTML package that can be printed to PDF by the browser.
+- The inspector export action downloads a real script package from current persisted script blocks. FDX, Fountain, and PDF exports are generated from the same ordered script block source.
 - The top-level Invite action creates a persisted project share link and reviewer record, then opens the Collaboration inspector tab.
 - The Collaboration inspector tab renders persisted collaborators and the current share link instead of local mock reviewers.
 - The Collaboration panel is extracted from the main workspace component; the shell owns state and handlers, while the panel owns share/reviewer controls.
@@ -323,7 +323,7 @@ Functional:
 - derived entity assertions, either unit tests or deterministic script checks
 - current deterministic tests live in `src/lib/domain/*.test.ts` and cover scene heading parsing, block insertion, text editing, duplicate/delete, empty scene rows, derived scene/character/location sync, and project lifecycle trash/restore behavior.
 - current E2E tests live in `tests/e2e/*.spec.ts` and run against a production `next start` server on port `3100`.
-- export formatter tests cover ordered Fountain text, Final Draft XML escaping, and generated package metadata.
+- export formatter tests cover ordered Fountain text, Final Draft XML escaping, native PDF structure, and generated package metadata.
 - E2E tests assert pressing Enter commits the current unblurred script line before inserting the next block.
 - E2E tests assert the Character -> Dialogue -> Character writing sequence persists ordered blocks and updates the Characters page from derived script state.
 
@@ -349,4 +349,4 @@ Persistence:
 - Next.js 16 behavior may differ from older examples. Read local Next docs before adding server-side APIs.
 - Characters page in the reference showed inconsistent counters. Our implementation should use one derived calculation instead of reproducing that inconsistency.
 - Domain behavior is currently verified by TypeScript build only. Add unit tests or deterministic assertion scripts before the sync logic becomes more complex.
-- PDF export is currently a printable HTML package, not a native binary PDF. Native PDF output should be added through a server-side renderer if required.
+- PDF export uses a lightweight native PDF generator in the domain layer. Rich screenplay pagination and multi-page layout remain future product hardening work.

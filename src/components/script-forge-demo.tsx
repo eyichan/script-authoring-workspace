@@ -441,6 +441,7 @@ export function ScriptForgeDemo({
   const nextPropNumber = useRef(initialWorkspace.props.length + 1);
   const nextAssetNumber = useRef(initialWorkspace.assetTasks.length + 1);
   const nextRevisionNumber = useRef(1);
+  const skipBlurPersistBlockIds = useRef<Set<string>>(new Set());
   const blockInputRefs = useRef<Record<string, BlockInputElement | null>>({});
   const [beats, setBeats] = useState<Beat[]>(initialWorkspace.beats);
   const [props, setProps] = useState<Prop[]>(initialWorkspace.props);
@@ -772,6 +773,30 @@ export function ScriptForgeDemo({
     );
   };
 
+  const getCurrentBlockInputText = (
+    block: ScriptBlock,
+    input: BlockInputElement,
+  ) => {
+    if (block.type === "scene") {
+      return buildSceneHeading({
+        ...(sceneDrafts[block.id] ?? getSceneDraft(block.text)),
+        locationName: input.value,
+      });
+    }
+
+    return normalizeBlockText(block.type, input.value);
+  };
+
+  const handleBlockInputBlur = (block: ScriptBlock, input: BlockInputElement) => {
+    const text = getCurrentBlockInputText(block, input);
+
+    if (skipBlurPersistBlockIds.current.delete(block.id)) {
+      return;
+    }
+
+    handlePersistScriptBlockText(block.id, text);
+  };
+
   const handleBlockKeyDown = (
     block: ScriptBlock,
     event: KeyboardEvent<BlockInputElement>,
@@ -781,7 +806,9 @@ export function ScriptForgeDemo({
     event.preventDefault();
     const nextTool = nextToolByBlockType[block.type];
     const nextType = toolToBlockType[nextTool];
+    const currentText = getCurrentBlockInputText(block, event.currentTarget);
 
+    skipBlurPersistBlockIds.current.add(block.id);
     setActiveTool(nextTool);
     void runScriptMutation(
       () =>
@@ -790,7 +817,7 @@ export function ScriptForgeDemo({
           scriptId: script.id,
           type: nextType,
           afterBlockId: block.id,
-          text: block.text,
+          text: currentText,
         }),
       { focusReturnedBlock: true },
     );
@@ -1073,7 +1100,7 @@ export function ScriptForgeDemo({
     setLastExport(exportPackage.filename);
     setProductionMessage(
       exportFormat === "pdf"
-        ? `Printable PDF package downloaded as ${exportPackage.filename}.`
+        ? `PDF export downloaded as ${exportPackage.filename}.`
         : `${exportLabels[exportFormat]} export downloaded as ${exportPackage.filename}.`,
     );
   };
@@ -1480,8 +1507,8 @@ export function ScriptForgeDemo({
                                 locationName: event.target.value,
                               })
                             }
-                            onBlur={() =>
-                              handlePersistScriptBlockText(block.id, block.text)
+                            onBlur={(event) =>
+                              handleBlockInputBlur(block, event.currentTarget)
                             }
                             onKeyDown={(event) => handleBlockKeyDown(block, event)}
                             className="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
@@ -1538,7 +1565,7 @@ export function ScriptForgeDemo({
                               handleUpdateScriptBlock(block.id, event.target.value)
                             }
                             onBlur={(event) =>
-                              handlePersistScriptBlockText(block.id, event.target.value)
+                              handleBlockInputBlur(block, event.currentTarget)
                             }
                             onKeyDown={(event) => handleBlockKeyDown(block, event)}
                             className="block w-full border-0 bg-transparent p-0 text-center font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
@@ -1584,7 +1611,7 @@ export function ScriptForgeDemo({
                             resizeBlockInput(event.target);
                           }}
                           onBlur={(event) =>
-                            handlePersistScriptBlockText(block.id, event.target.value)
+                            handleBlockInputBlur(block, event.currentTarget)
                           }
                           onInput={(event) => resizeBlockInput(event.currentTarget)}
                           onKeyDown={(event) => handleBlockKeyDown(block, event)}
