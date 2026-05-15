@@ -2,7 +2,7 @@
 
 ## Current Step
 
-M1. Local functional workspace
+M2. Persistence foundation
 
 ## Completed
 
@@ -35,24 +35,23 @@ M1. Local functional workspace
 - Extracted pure script block operations into `src/lib/domain/script-blocks.ts` and wired the Script editor to use them.
 - Added local manual module workflows for Beats, Props, and Assets, while keeping Storyboard locked with the unavailable-module pattern.
 - Added local Recents project lifecycle with active projects, trash, create, open, delete-to-trash, restore, and project-card right-click actions.
+- Added Docker Postgres local service on host port `54329`.
+- Added Prisma 7 config, schema, initial migration, and Postgres adapter-backed Prisma client.
+- Added deterministic Postgres seed script for the current local workspace model.
+- Added database scripts for Prisma generate, validate, migrate, seed, and studio.
 
 ## In Progress
 
-- M1 local functional workspace.
+- M2 persistence foundation.
 
 ## Next
 
-1. Finish the local Script editor before database work:
-   - structured Scene block with `INT./EXT.`, `LOCATION`, and `DAY/NIGHT` controls
-     - implemented; still needs closer selector popover styling if required
-   - structured Character block with create/select behavior
-     - implemented with native datalist; still needs richer selector popover if required
-   - Enter-key next-block flow: Scene -> Action, Character -> Dialogue, Dialogue -> Character/Action
-   - left scene item click focuses or scrolls to the source scene block
-2. Add explicit inline edit affordances if needed; source text editing and right-click duplicate/delete are implemented.
-3. Add fuller UI/E2E tests if the workflow grows beyond browser smoke coverage.
-4. Move local state to Postgres/Prisma persistence only after the local authoring workflow is verified.
-5. Replace local project lifecycle state with persisted records and route-backed project loading.
+1. Wire route-backed workspace loading from Postgres through a server-side data layer.
+2. Replace local project lifecycle state with persisted project records.
+3. Add server actions for script block insert, edit, duplicate, delete, and resequencing.
+4. Preserve the existing direct-on-canvas insertion interaction while moving mutations to the database.
+5. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, and refresh persistence.
+6. Add export/share/collaboration product states after persistence-backed editing is stable.
 
 ## Verification Log
 
@@ -95,6 +94,18 @@ M1. Local functional workspace
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
   - Playwright smoke test succeeded: Home opened Recents, `New Project` created `Untitled Script 4`, `Open` switched the workspace title to the new project, `Delete` moved it to Trash, `Restore` returned it to Active, and console warning/error count stayed at 0.
+- After adding Prisma/Postgres persistence foundation:
+  - `docker compose up -d postgres`: succeeded; `script-authoring-postgres` is healthy.
+  - `npx prisma migrate dev --name init` failed with `localhost:54329` (`P1001`) but succeeded after switching the connection string to `127.0.0.1:54329`.
+  - `npm run db:validate`: succeeded.
+  - `npm run db:generate`: succeeded.
+  - `npm run db:seed`: succeeded and seeded `project-demo`.
+  - Seed verification query returned 1 project, 1 script, 5 script blocks, 1 beat, 1 prop, and 0 asset tasks.
+  - `npx prisma migrate status`: succeeded; database schema is up to date.
+  - `npm test`: succeeded, 6 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
+  - `npm audit --audit-level=moderate`: failed with 5 moderate dependency advisories in transitive Prisma/Next dependencies; `npm audit fix --force` was not run because it proposes breaking downgrades.
 
 ## Decisions
 
@@ -105,4 +116,5 @@ M1. Local functional workspace
 - Track dependency audit separately from baseline setup.
 - Keep domain sync pure and independent from React, Next.js, and Prisma.
 - Keep the first functional pass local-state only so workflow behavior can be validated before introducing persistence.
-- Do not start Postgres/Prisma until the local editable Script workflow can create custom Scene, Character, and Dialogue blocks and update derived pages from user-entered text.
+- Use Prisma 7 with `@prisma/adapter-pg`; do not use a bare `new PrismaClient()` in app code or seed scripts.
+- Use `127.0.0.1` for the local Docker Postgres connection string on this host.

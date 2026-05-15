@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: script-authoring-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: script_author
+      POSTGRES_PASSWORD: script_author_password
+      POSTGRES_DB: script_authoring
+    ports:
+      - "54329:5432"
+    volumes:
+      - script_authoring_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U script_author -d script_authoring"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  script_authoring_postgres:

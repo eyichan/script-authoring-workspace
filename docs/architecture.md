@@ -57,19 +57,42 @@ Current domain behavior:
 
 Persistence owns database schema and data loading/saving.
 
-Planned stack:
+Current stack:
 
 - Docker Postgres
-- Prisma
+- Prisma 7
+- `@prisma/adapter-pg`
+
+Planned stack:
+
 - Next.js server actions or route handlers
+
+Current paths:
+
+```text
+prisma/schema.prisma
+prisma/migrations/
+prisma/seed.ts
+prisma.config.ts
+docker-compose.yml
+src/lib/db/prisma.ts
+```
 
 Planned paths:
 
 ```text
-prisma/schema.prisma
 src/lib/db/
 src/app/actions/
 ```
+
+Current persistence behavior:
+
+- `docker-compose.yml` runs local Postgres 17 on host port `54329`.
+- `.env.example` uses `127.0.0.1` instead of `localhost` because Prisma could not reach the Docker-published port through `localhost` on this host.
+- `prisma/schema.prisma` defines durable tables for projects, scripts, script blocks, beats, props, and asset generation tasks.
+- `prisma.config.ts` keeps the database URL in Prisma config, following Prisma 7 conventions.
+- `src/lib/db/prisma.ts` initializes Prisma through `PrismaPg` and keeps a development singleton.
+- `prisma/seed.ts` upserts the deterministic local seed workspace into Postgres without deleting existing records.
 
 ### UI
 
@@ -201,6 +224,9 @@ Persistence:
 
 - Docker Postgres starts
 - Prisma migration succeeds
+- Prisma schema validates
+- Prisma Client generates
+- Seed writes deterministic workspace records
 - refresh preserves data
 
 ## Open Risks

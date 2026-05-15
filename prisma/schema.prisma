@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProjectStatus {
+  active
+  trashed
+}
+
+enum ScriptBlockType {
+  scene
+  action
+  character
+  paren
+  dialogue
+  transition
+  comment
+  subtitle
+}
+
+enum AssetTaskKind {
+  movie_poster
+  casting_poster
+  concept_trailer
+  scene_dramatization
+  director_roundtable
+  script_table_read
+}
+
+enum AssetTaskStatus {
+  queued
+  running
+  done
+  failed
+}
+
+model Project {
+  id        String        @id
+  title     String
+  status    ProjectStatus @default(active)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  trashedAt DateTime?
+  scripts   Script[]
+}
+
+model Script {
+  id         String        @id
+  projectId  String
+  title      String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  blocks     ScriptBlock[]
+  beats      Beat[]
+  props      Prop[]
+  assetTasks AssetTask[]
+
+  @@index([projectId])
+}
+
+model ScriptBlock {
+  id        String          @id
+  scriptId  String
+  type      ScriptBlockType
+  text      String          @default("")
+  position  Int
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  script    Script          @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptId, position])
+  @@index([scriptId])
+}
+
+model Beat {
+  id              String   @id
+  scriptId        String
+  title           String
+  description     String
+  color           String
+  durationMinutes Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  script          Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@index([scriptId])
+}
+
+model Prop {
+  id          String   @id
+  scriptId    String
+  name        String
+  category    String
+  description String
+  imageNote   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  script      Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@index([scriptId])
+}
+
+model AssetTask {
+  id        String          @id
+  scriptId  String
+  kind      AssetTaskKind
+  title     String
+  status    AssetTaskStatus @default(queued)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  script    Script          @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@index([scriptId])
+  @@index([status])
+}
