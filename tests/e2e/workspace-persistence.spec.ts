@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
+import { readFile } from "node:fs/promises";
 
 loadEnv({ path: ".env.local" });
 
@@ -162,4 +163,29 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   expect(script.props).toHaveLength(1);
   expect(script.assetTasks).toHaveLength(1);
   expect(script.assetTasks[0]?.status).toBe("done");
+});
+
+test("downloads a Final Draft export from persisted script blocks", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  await page.getByRole("button", { name: "Scene", exact: true }).click({ force: true });
+  await page.getByRole("textbox", { name: /scene location block 1/i }).fill("export bay");
+  await page.getByRole("button", { name: "Invite" }).click({ force: true });
+  await expect(page.getByRole("button", { name: /INT EXPORT BAY - DAY/ })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Final Draft" }).click({ force: true });
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toMatch(/untitled-script-\d+\.fdx/);
+
+  const path = await download.path();
+  expect(path).toBeTruthy();
+
+  const content = await readFile(path!, "utf8");
+  expect(content).toContain("<FinalDraft");
+  expect(content).toContain("INT. EXPORT BAY - DAY");
+  await expect(page.getByText(/export downloaded as/i)).toBeVisible();
 });

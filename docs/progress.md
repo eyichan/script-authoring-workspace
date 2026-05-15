@@ -45,6 +45,7 @@ M2. Persistence foundation
 - Added database-backed script block insert, blur-save text update, duplicate, delete, and position resequencing.
 - Added database-backed Beats, Props, and Assets creation/import actions.
 - Added Playwright E2E coverage for project lifecycle, script block persistence, and Workbench persistence.
+- Added real script export downloads for FDX, Fountain, and printable HTML packages.
 
 ## In Progress
 
@@ -52,10 +53,11 @@ M2. Persistence foundation
 
 ## Next
 
-1. Add export/share/collaboration product states after persistence-backed editing is stable.
+1. Add Share / Invite / Collaboration product states.
 2. Split the large workspace component once persistence behavior stabilizes.
-3. Add delete/edit flows for Beats, Props, and Assets if the product requires full CRUD rather than create-only module records.
-4. Expand E2E for character/dialogue and export/share once those flows become persisted product behavior.
+3. Add native binary PDF export if browser-printable HTML is not sufficient.
+4. Add delete/edit flows for Beats, Props, and Assets if the product requires full CRUD rather than create-only module records.
+5. Expand E2E for character/dialogue and share/collaboration once those flows become persisted product behavior.
 
 ## Verification Log
 
@@ -136,6 +138,11 @@ M2. Persistence foundation
   - `npm test`: succeeded, 6 tests passed.
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
+- After adding real export downloads:
+  - `npm test`: succeeded, 9 tests passed, including ordered Fountain formatting, Final Draft XML escaping, and package metadata checks.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
+  - `npm run test:e2e`: succeeded; 3 Playwright tests passed, including downloading a Final Draft export from persisted script blocks and verifying the `.fdx` file content contains `INT. EXPORT BAY - DAY`.
 
 ## Decisions
 
@@ -149,3 +156,4 @@ M2. Persistence foundation
 - Use Prisma 7 with `@prisma/adapter-pg`; do not use a bare `new PrismaClient()` in app code or seed scripts.
 - Use `127.0.0.1` for the local Docker Postgres connection string on this host.
 - Keep `.env.local` untracked; commit `.env.example` so the database URL contract is recoverable in later sessions.
+- Treat PDF as printable HTML until a native PDF renderer is selected; do not label that path as binary PDF output.

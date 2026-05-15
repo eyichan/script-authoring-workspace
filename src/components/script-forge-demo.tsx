@@ -78,6 +78,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  buildScriptExport,
+  type ScriptExportFormat,
+} from "@/lib/domain/exports";
+import {
   deriveScriptEntities,
   formatSceneHeading,
   parseSceneHeading,
@@ -104,7 +108,7 @@ import type {
 } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
-type ExportFormat = "fdx" | "fountain" | "pdf";
+type ExportFormat = ScriptExportFormat;
 type EditorTab = "script" | "cover";
 type InspectorTab = "info" | "collab";
 type PaginationMode = "minimal" | "studio" | "fast";
@@ -864,6 +868,29 @@ export function ScriptForgeDemo({
     setWorkbenchMessage(`${workbenchConfig[activePage].action} created as a local draft.`);
   };
 
+  const handleExportScript = () => {
+    const exportPackage = buildScriptExport(exportFormat, script.title, blocks);
+    const blob = new Blob([exportPackage.content], {
+      type: exportPackage.mimeType,
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = exportPackage.filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setLastExport(exportPackage.filename);
+    setProductionMessage(
+      exportFormat === "pdf"
+        ? `Printable PDF package downloaded as ${exportPackage.filename}.`
+        : `${exportLabels[exportFormat]} export downloaded as ${exportPackage.filename}.`,
+    );
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-[#f4f6f5] text-[#242421]">
       <header className="flex h-12 items-center justify-between px-3">
@@ -1436,10 +1463,7 @@ export function ScriptForgeDemo({
                   <Button
                     variant="secondary"
                     className="h-8 justify-start bg-white/70 text-[#666660] shadow-none"
-                    onClick={() => {
-                      setLastExport(`${exportLabels[exportFormat]} package staged`);
-                      setProductionMessage(`${exportLabels[exportFormat]} export staged locally.`);
-                    }}
+                    onClick={handleExportScript}
                   >
                     <Play data-icon="inline-start" />
                     Export {exportLabels[exportFormat]}
