@@ -35,6 +35,20 @@ Planned path:
 src/lib/domain/
 ```
 
+Current files:
+
+```text
+src/lib/domain/types.ts
+src/lib/domain/screenplay.ts
+src/lib/domain/seed.ts
+```
+
+Current domain behavior:
+
+- `parseSceneHeading` parses `INT./EXT.` style headings into prefix, location, and time of day.
+- `deriveScriptEntities` derives scenes, characters, locations, character references, scene dialogue counts, and location character references from ordered script blocks.
+- `seedWorkspace` provides a deterministic local workspace for the first functional integration pass.
+
 ### Persistence
 
 Persistence owns database schema and data loading/saving.
@@ -147,4 +161,4 @@ Persistence:
 - The current visual demo is a large single component. It should be split once functional state grows.
 - Next.js 16 behavior may differ from older examples. Read local Next docs before adding server-side APIs.
 - Characters page in the reference showed inconsistent counters. Our implementation should use one derived calculation instead of reproducing that inconsistency.
-
+- Domain behavior is currently verified by TypeScript build only. Add unit tests or deterministic assertion scripts before the sync logic becomes more complex.

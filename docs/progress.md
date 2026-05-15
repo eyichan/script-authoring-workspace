@@ -15,15 +15,20 @@ M0. Project Baseline
 - Installed dependencies.
 - Verified shadcn project context.
 - Ran baseline lint and production build.
+- Committed M0 baseline as `8d566e3`.
+- Added domain types, screenplay parsing, derived entity sync, and seed workspace.
+- Re-ran lint and build after domain code.
 
 ## In Progress
 
-- Commit independent project baseline.
+- M1 local functional workspace.
 
 ## Next
 
-1. Commit baseline.
-2. Start M1 local functional workspace.
+1. Commit domain foundation.
+2. Refactor UI to read from `seedWorkspace`.
+3. Replace static screenplay/sidebar/entity data with derived workspace data.
+4. Add local block insertion handlers.
 
 ## Verification Log
 
@@ -31,6 +36,9 @@ M0. Project Baseline
 - `npm run lint`: succeeded.
 - `npm run build`: succeeded.
 - `npx shadcn@latest info`: succeeded; confirmed Next.js 16.2.6, Tailwind v4, shadcn base-nova, base primitives, lucide icons.
+- After adding domain foundation:
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
 
 ## Decisions
 
@@ -39,3 +47,4 @@ M0. Project Baseline
 - Use local state first, then Postgres/Prisma persistence.
 - Script-derived entities and manual production modules remain separate by design.
 - Track dependency audit separately from baseline setup.
+- Keep domain sync pure and independent from React, Next.js, and Prisma.
