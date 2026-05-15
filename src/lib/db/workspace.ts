@@ -30,6 +30,10 @@ export type ScriptMutationSnapshot = WorkspaceSnapshot & {
   activeBlockId?: string;
 };
 
+export type WorkbenchMutationSnapshot = WorkspaceSnapshot & {
+  message: string;
+};
+
 const projectInclude = {
   scripts: {
     orderBy: { createdAt: "asc" },
@@ -54,6 +58,15 @@ const assetTaskKindToDomain: Record<PrismaAssetTaskKind, AssetTaskKind> = {
   scene_dramatization: "scene-dramatization",
   director_roundtable: "director-roundtable",
   script_table_read: "script-table-read",
+};
+
+const assetTaskKindToPrisma: Record<AssetTaskKind, PrismaAssetTaskKind> = {
+  "movie-poster": PrismaAssetTaskKind.movie_poster,
+  "casting-poster": PrismaAssetTaskKind.casting_poster,
+  "concept-trailer": PrismaAssetTaskKind.concept_trailer,
+  "scene-dramatization": PrismaAssetTaskKind.scene_dramatization,
+  "director-roundtable": PrismaAssetTaskKind.director_roundtable,
+  "script-table-read": PrismaAssetTaskKind.script_table_read,
 };
 
 function serializeDate(date: Date): string {
@@ -434,5 +447,89 @@ export async function deleteScriptBlockSnapshot({
   return {
     ...(await getWorkspaceSnapshot(projectId)),
     activeBlockId: fallbackBlockId,
+  };
+}
+
+export async function createBeatSnapshot({
+  projectId,
+  scriptId,
+}: {
+  projectId: string;
+  scriptId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const sequence = (await prisma.beat.count({ where: { scriptId } })) + 1;
+  const title = `Beat ${sequence}: Pressure Turn`;
+
+  await prisma.beat.create({
+    data: {
+      id: `beat-${randomUUID()}`,
+      scriptId,
+      title,
+      description: "A persisted outline beat created from the Beats page.",
+      color: "racing-green",
+      durationMinutes: 8,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: `${title} created as a persisted beat.`,
+  };
+}
+
+export async function createPropSnapshot({
+  projectId,
+  scriptId,
+}: {
+  projectId: string;
+  scriptId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const sequence = (await prisma.prop.count({ where: { scriptId } })) + 1;
+  const name = `Continuity Tag ${sequence}`;
+
+  await prisma.prop.create({
+    data: {
+      id: `prop-${randomUUID()}`,
+      scriptId,
+      name,
+      category: "Continuity",
+      description: "A persisted prop record created from the Props page.",
+      imageNote: "Neutral table reference, labeled for continuity.",
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: `${name} added to the persisted prop book.`,
+  };
+}
+
+export async function importAssetSnapshot({
+  projectId,
+  scriptId,
+}: {
+  projectId: string;
+  scriptId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const sequence = (await prisma.assetTask.count({ where: { scriptId } })) + 1;
+  const isVideo = sequence % 2 === 0;
+  const kind: AssetTaskKind = isVideo ? "concept-trailer" : "scene-dramatization";
+  const title = isVideo
+    ? `Imported video reference ${sequence}`
+    : `Imported still reference ${sequence}`;
+
+  await prisma.assetTask.create({
+    data: {
+      id: `asset-${randomUUID()}`,
+      scriptId,
+      kind: assetTaskKindToPrisma[kind],
+      title,
+      status: "done",
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: `${title} imported into the persisted asset library.`,
   };
 }

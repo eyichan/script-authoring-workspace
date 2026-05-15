@@ -80,6 +80,7 @@ src/lib/db/prisma.ts
 src/lib/db/workspace.ts
 src/app/actions/projects.ts
 src/app/actions/script-blocks.ts
+src/app/actions/workbench.ts
 ```
 
 Planned paths:
@@ -100,6 +101,7 @@ Current persistence behavior:
 - `src/lib/db/workspace.ts` maps Prisma records into the domain `WorkspaceView` shape and derives scenes, characters, and locations from persisted script blocks.
 - `src/app/actions/projects.ts` persists project create, open, trash, and restore flows through server actions.
 - `src/app/actions/script-blocks.ts` persists script block insert, text update, duplicate, delete, and resequencing flows through server actions.
+- `src/app/actions/workbench.ts` persists manual Beats, Props, and Assets creation/import flows through server actions.
 
 ### UI
 
@@ -162,11 +164,11 @@ Manual modules:
 
 - beats
 - props
+- assets imported/generated task records
 
-Generated/mock modules:
+Generated/local-only modules:
 
-- assets
-- generation tasks
+- scene still generation UI state
 
 Locked module:
 
@@ -223,6 +225,16 @@ Floating toolbar click / context menu action / input blur
   -> script block position resequencing when needed
   -> return WorkspaceSnapshot plus activeBlockId
   -> client refreshes local render state and focuses the returned block
+```
+
+Implemented persisted workbench flow:
+
+```text
+Beats / Props / Assets action
+  -> server action
+  -> Prisma create Beat / Prop / AssetTask
+  -> return WorkspaceSnapshot plus status message
+  -> client refreshes cards, sidebar counts, and inspector statistics
 ```
 
 ## Verification Gates

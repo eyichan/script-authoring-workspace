@@ -51,6 +51,11 @@ import {
   insertScriptBlockAction,
   updateScriptBlockAction,
 } from "@/app/actions/script-blocks";
+import {
+  createBeatAction,
+  createPropAction,
+  importAssetAction,
+} from "@/app/actions/workbench";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -291,7 +296,6 @@ const seedProjects: Project[] = [
 
 const scenePrefixOptions = ["INT", "EXT"] as const;
 const sceneTimeOptions = ["DAY", "NIGHT"] as const;
-const localCreatedAt = "local-draft";
 
 function isWorkbenchPage(page: PageName): page is WorkbenchPageName {
   return page !== "Script" && page !== "Beats" && page !== "Storyboard";
@@ -380,6 +384,10 @@ type ScriptMutationPayload = WorkspaceSnapshotPayload & {
   activeBlockId?: string;
 };
 
+type WorkbenchMutationPayload = WorkspaceSnapshotPayload & {
+  message: string;
+};
+
 export function ScriptForgeDemo({
   initialActiveProjectId,
   initialProjects,
@@ -437,6 +445,7 @@ export function ScriptForgeDemo({
   const [generatedStills, setGeneratedStills] = useState<string[]>([]);
   const [projectMutationPending, setProjectMutationPending] = useState(false);
   const [scriptMutationPending, setScriptMutationPending] = useState(false);
+  const [workbenchMutationPending, setWorkbenchMutationPending] = useState(false);
   const editorMode = activePage === "Script";
   const activeProject =
     projects.find((project) => project.id === activeProjectId) ??
@@ -514,6 +523,22 @@ export function ScriptForgeDemo({
       }
     } finally {
       setScriptMutationPending(false);
+    }
+  };
+
+  const runWorkbenchMutation = async (
+    operation: () => Promise<WorkbenchMutationPayload>,
+  ) => {
+    if (workbenchMutationPending) return;
+
+    setWorkbenchMutationPending(true);
+    try {
+      const snapshot = await operation();
+      setProjects(snapshot.projects);
+      applyWorkspace(snapshot.workspace);
+      setWorkbenchMessage(snapshot.message);
+    } finally {
+      setWorkbenchMutationPending(false);
     }
   };
 
@@ -771,54 +796,30 @@ export function ScriptForgeDemo({
   };
 
   const handleCreateBeat = () => {
-    const sequence = nextBeatNumber.current;
-    nextBeatNumber.current += 1;
-    const nextBeat: Beat = {
-      id: `beat-local-${sequence}`,
-      scriptId: script.id,
-      title: `Beat ${sequence}: Pressure Turn`,
-      description: "A local outline beat created from the Beats page.",
-      color: "racing-green",
-      durationMinutes: 8,
-    };
-
-    setBeats((current) => [...current, nextBeat]);
-    setWorkbenchMessage(`${nextBeat.title} created as a local beat.`);
+    void runWorkbenchMutation(() =>
+      createBeatAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+      }),
+    );
   };
 
   const handleCreateProp = () => {
-    const sequence = nextPropNumber.current;
-    nextPropNumber.current += 1;
-    const nextProp: Prop = {
-      id: `prop-local-${sequence}`,
-      scriptId: script.id,
-      name: `Continuity Tag ${sequence}`,
-      category: "Continuity",
-      description: "A local prop record created from the Props page.",
-      imageNote: "Neutral table reference, labeled for continuity.",
-    };
-
-    setProps((current) => [...current, nextProp]);
-    setWorkbenchMessage(`${nextProp.name} added to the prop book.`);
+    void runWorkbenchMutation(() =>
+      createPropAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+      }),
+    );
   };
 
   const handleImportAsset = () => {
-    const sequence = nextAssetNumber.current;
-    nextAssetNumber.current += 1;
-    const isVideo = sequence % 2 === 0;
-    const nextAsset: AssetTask = {
-      id: `asset-local-${sequence}`,
-      scriptId: script.id,
-      kind: isVideo ? "concept-trailer" : "scene-dramatization",
-      title: isVideo
-        ? `Imported video reference ${sequence}`
-        : `Imported still reference ${sequence}`,
-      status: "done",
-      createdAt: `${localCreatedAt}-${sequence}`,
-    };
-
-    setAssetTasks((current) => [...current, nextAsset]);
-    setWorkbenchMessage(`${nextAsset.title} imported into the asset library.`);
+    void runWorkbenchMutation(() =>
+      importAssetAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+      }),
+    );
   };
 
   const handleCreateProject = () => {
@@ -1050,14 +1051,16 @@ export function ScriptForgeDemo({
             ) : activePage === "Beats" ? (
               <Button
                 className="pointer-events-auto absolute right-4 top-1/2 z-10 h-7 -translate-y-1/2 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0 max-[900px]:static max-[900px]:translate-y-0"
+                disabled={workbenchMutationPending}
                 onClick={handleCreateBeat}
               >
                 <Plus className="size-[14px]" data-icon="inline-start" />
-                New Beat
+                {workbenchMutationPending ? "Saving" : "New Beat"}
               </Button>
             ) : activePage !== "Storyboard" ? (
               <Button
                 className="pointer-events-auto absolute right-4 top-1/2 z-10 h-7 -translate-y-1/2 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0 max-[900px]:static max-[900px]:translate-y-0"
+                disabled={workbenchMutationPending}
                 onClick={handleWorkbenchAction}
               >
                 {workbenchConfig[activePage].action === "Tidy" ? (
@@ -1065,7 +1068,7 @@ export function ScriptForgeDemo({
                 ) : (
                   <Plus className="size-[14px]" data-icon="inline-start" />
                 )}
-                {workbenchConfig[activePage].action}
+                {workbenchMutationPending ? "Saving" : workbenchConfig[activePage].action}
               </Button>
             ) : null}
           </header>

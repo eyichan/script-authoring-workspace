@@ -43,17 +43,18 @@ M2. Persistence foundation
 - Replaced Recents project create, open, delete-to-trash, and restore with database-backed server actions.
 - Added `.env.example` to Git while keeping `.env.local` ignored for local runtime credentials.
 - Added database-backed script block insert, blur-save text update, duplicate, delete, and position resequencing.
+- Added database-backed Beats, Props, and Assets creation/import actions.
 
 ## In Progress
 
-- M2 database-backed project lifecycle.
+- M2 database-backed workspace persistence.
 
 ## Next
 
-1. Persist manual Beats, Props, and Assets module mutations.
-2. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, and refresh persistence.
-3. Add export/share/collaboration product states after persistence-backed editing is stable.
-4. Split the large workspace component once persistence behavior stabilizes.
+1. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, workbench create/import, and refresh persistence.
+2. Add export/share/collaboration product states after persistence-backed editing is stable.
+3. Split the large workspace component once persistence behavior stabilizes.
+4. Add delete/edit flows for Beats, Props, and Assets if the product requires full CRUD rather than create-only module records.
 
 ## Verification Log
 
@@ -121,6 +122,12 @@ M2. Persistence foundation
   - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
   - Browser smoke test on `http://localhost:3001`: added a Scene block from the floating toolbar, typed `orbital gate`, blurred the field to save, refreshed, and verified the sidebar still showed `1. INT ORBITAL GATE - DAY`.
   - Right-click smoke test duplicated that scene block and database verification showed two rows with positions 1 and 2; deleting the duplicate via the context menu returned the database to one row at position 1.
+- After wiring database-backed Workbench creation/import:
+  - `npm test`: succeeded, 6 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
+  - Browser smoke test on `http://localhost:3001`: opened Beats and created `Beat 1: Pressure Turn`, opened Props and created `Continuity Tag 1`, opened Assets and imported `Imported still reference 1`.
+  - Database verification query returned 1 beat, 1 prop, and 1 asset task for the active script; the asset task was `scene_dramatization` with status `done`.
 
 ## Decisions
 
