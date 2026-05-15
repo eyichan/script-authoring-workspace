@@ -34,11 +34,16 @@ M1. Local functional workspace
 
 ## Next
 
-1. Add script block edit/delete and context menu actions.
-2. Add structured scene selector controls for `INT./EXT.`, `LOCATION`, and `DAY/NIGHT`.
-3. Add local project creation/deletion flow.
-4. Add deterministic domain/UI tests for insertion and derived entity sync.
-5. Move local state to Postgres/Prisma persistence.
+1. Finish the local Script editor before database work:
+   - structured Scene block with `INT./EXT.`, `LOCATION`, and `DAY/NIGHT` controls
+   - structured Character block with create/select behavior
+   - Enter-key next-block flow: Scene -> Action, Character -> Dialogue, Dialogue -> Character/Action
+   - left scene item click focuses or scrolls to the source scene block
+2. Add script block edit/delete and context menu actions.
+3. Add deterministic domain/UI tests for insertion, editing, deletion, and derived entity sync.
+4. Implement manual modules: Beats, Props, Assets mock tasks, Storyboard locked state.
+5. Add local project creation/deletion flow.
+6. Move local state to Postgres/Prisma persistence only after the local authoring workflow is verified.
 
 ## Verification Log
 
@@ -66,3 +71,4 @@ M1. Local functional workspace
 - Track dependency audit separately from baseline setup.
 - Keep domain sync pure and independent from React, Next.js, and Prisma.
 - Keep the first functional pass local-state only so workflow behavior can be validated before introducing persistence.
+- Do not start Postgres/Prisma until the local editable Script workflow can create custom Scene, Character, and Dialogue blocks and update derived pages from user-entered text.

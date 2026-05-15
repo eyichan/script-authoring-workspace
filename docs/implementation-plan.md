@@ -98,6 +98,12 @@ Acceptance:
 
 Goal: make the app usable without a database first.
 
+Execution priority:
+
+- Complete authorable canvas behavior before persistence.
+- Treat fixed text insertion as insufficient; the user must be able to type custom screenplay content directly in the script canvas.
+- Postgres/Prisma starts only after local Scene, Character, and Dialogue authoring is verified end to end.
+
 Tasks:
 
 1. Add domain types for projects, scripts, blocks, scenes, characters, locations, props, beats, and assets.
@@ -120,7 +126,9 @@ Tasks:
 Acceptance:
 
 - Browser workflow can create a scene, character, and dialogue.
+- Creation uses user-entered custom text, not fixed generated placeholders.
 - Derived sidebars/cards update immediately.
+- Empty or partial scene selector rows do not create false scene/location entities.
 - No page reload persistence yet.
 - Lint passes.
 
@@ -212,4 +220,3 @@ Acceptance:
 
 - The app is usable as a local screenplay authoring workspace.
 - Remaining limitations are documented.
-
