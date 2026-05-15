@@ -91,8 +91,7 @@ src/components/workspace/dialogs/
 Current UI behavior:
 
 - The Script page renders ordered `ScriptBlock` records instead of static screenplay lines.
-- The floating script toolbar chooses the next inserted block type.
-- The inline script input inserts a block with either typed text or a tool-specific default.
+- The floating script toolbar directly appends the clicked screenplay element to the script canvas.
 - Adding a scene block creates a derived scene and makes it the active sidebar scene.
 - Adding a character block creates or reuses the derived character.
 - Adding dialogue after a character increases the derived character and scene dialogue counts.
@@ -139,8 +138,7 @@ User action
 Implemented local flow:
 
 ```text
-Floating toolbar selection
-  -> inline script input
+Floating toolbar click
   -> append ScriptBlock in React state
   -> deriveScriptEntities(scriptId, blocks)
   -> update Script / Sidebar / Statistics / Workbench pages

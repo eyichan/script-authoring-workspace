@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
   Atom,
@@ -100,17 +100,6 @@ const toolToBlockType: Record<ToolLabel, ScriptBlockType> = {
   Transition: "transition",
   Comment: "comment",
   Subtitle: "subtitle",
-};
-
-const nextToolByBlockType: Record<ScriptBlockType, ToolLabel> = {
-  scene: "Action",
-  action: "Action",
-  character: "Dialogue",
-  paren: "Dialogue",
-  dialogue: "Character",
-  transition: "Scene",
-  comment: "Action",
-  subtitle: "Action",
 };
 
 const exportLabels: Record<ExportFormat, string> = {
@@ -239,6 +228,7 @@ function getDefaultBlockText(tool: ToolLabel): string {
 export function ScriptForgeDemo() {
   const [activePage, setActivePage] = useState<PageName>("Script");
   const [blocks, setBlocks] = useState<ScriptBlock[]>(seedWorkspace.blocks);
+  const nextBlockNumber = useRef(seedWorkspace.blocks.length + 1);
   const [beats] = useState(seedWorkspace.beats);
   const [props] = useState(seedWorkspace.props);
   const [assetTasks] = useState(seedWorkspace.assetTasks);
@@ -251,7 +241,6 @@ export function ScriptForgeDemo() {
   );
   const [editorTab, setEditorTab] = useState<EditorTab>("script");
   const [activeTool, setActiveTool] = useState<ToolLabel>("Action");
-  const [draftBlockText, setDraftBlockText] = useState("");
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("info");
   const [paginationMode, setPaginationMode] = useState<PaginationMode>("minimal");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("fdx");
@@ -360,28 +349,31 @@ export function ScriptForgeDemo() {
     ],
   );
 
-  const handleAddScriptBlock = () => {
-    const type = toolToBlockType[activeTool];
-    const now = new Date().toISOString();
-    const id = `block-${Date.now()}`;
-    const text = draftBlockText.trim() || getDefaultBlockText(activeTool);
-    const nextBlock: ScriptBlock = {
-      id,
-      scriptId: seedWorkspace.script.id,
-      type,
-      text,
-      position:
-        blocks.reduce((highest, block) => Math.max(highest, block.position), 0) + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+  const handleInsertScriptBlock = (tool: ToolLabel) => {
+    const type = toolToBlockType[tool];
+    const sequence = nextBlockNumber.current;
+    nextBlockNumber.current += 1;
+    const id = `block-local-${sequence}`;
+    const timestamp = `local-draft-${sequence}`;
 
-    setBlocks((current) => [...current, nextBlock]);
+    setBlocks((current) => {
+      const nextBlock: ScriptBlock = {
+        id,
+        scriptId: seedWorkspace.script.id,
+        type,
+        text: getDefaultBlockText(tool),
+        position:
+          current.reduce((highest, block) => Math.max(highest, block.position), 0) + 1,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      return [...current, nextBlock];
+    });
     if (type === "scene") {
       setActiveScene(`scene-${id}`);
     }
-    setActiveTool(nextToolByBlockType[type]);
-    setDraftBlockText("");
+    setActiveTool(tool);
   };
 
   const handleWorkbenchAction = () => {
@@ -605,7 +597,7 @@ export function ScriptForgeDemo() {
                   <Tooltip key={tool.label}>
                     <TooltipTrigger
                       type="button"
-                      onClick={() => setActiveTool(tool.label)}
+                      onClick={() => handleInsertScriptBlock(tool.label)}
                       className={cn(
                         "relative grid h-[45px] w-[62px] shrink-0 justify-items-center gap-0.5 rounded-full bg-transparent px-2 py-1.5 text-[11px] font-normal text-[#6b7370] transition-[background-color,color] duration-150 hover:bg-[#f0f3f1]",
                         activeTool === tool.label &&
@@ -619,45 +611,9 @@ export function ScriptForgeDemo() {
                   </Tooltip>
                   ))}
                 </div>
-                <div className="pointer-events-none sticky top-[92px] z-10 mx-auto mt-[57px] w-[min(816px,100%)] text-right text-[11px] text-[#8b938f]">
-                  Current block: {activeTool}
-                </div>
 
               <article className="script-paper mx-auto mt-[-20px] min-h-[1210px] w-[min(816px,100%)] overflow-hidden">
                 <div className="mx-auto max-w-[576px] px-0 pb-36 pt-[104px] font-mono text-[16px] leading-[1.8] max-[900px]:max-w-[86%] max-[900px]:pt-20 max-[900px]:text-[13px]">
-                  <div className="mb-8 rounded-xl border border-[#e7e7e2] bg-[#fcfdfc]/90 p-3 font-sans shadow-[0_8px_24px_rgb(42_42_37/0.08)]">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-[12px] font-medium text-[#6f7772]">
-                        Add {activeTool}
-                      </span>
-                      <Badge variant="secondary">
-                        {derived.scenes.length} scenes · {derived.characters.length} characters
-                      </Badge>
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        value={draftBlockText}
-                        onChange={(event) => setDraftBlockText(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            handleAddScriptBlock();
-                          }
-                        }}
-                        placeholder={getDefaultBlockText(activeTool)}
-                        className="min-w-0 flex-1 rounded-lg border border-[#dfe4e1] bg-white px-3 py-2 text-[13px] text-[#252522] outline-none transition-[border-color,box-shadow] focus:border-[#89a893] focus:shadow-[0_0_0_3px_rgb(46_98_72/0.12)]"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleAddScriptBlock}
-                        className="h-9 rounded-lg bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none hover:bg-[#28583f] active:translate-y-0"
-                      >
-                        <Plus data-icon="inline-start" />
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-
                   {blocks.map((block) => (
                     <p
                       key={block.id}

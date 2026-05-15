@@ -21,8 +21,9 @@ M1. Local functional workspace
 - Committed domain foundation as `e13cfd9`.
 - Added `.gitignore` for local dev error logs as `53c610d`.
 - Refactored the main workspace UI to read script blocks from `seedWorkspace`.
-- Added local block insertion from the floating script toolbar and inline script input.
+- Added local block insertion from the floating script toolbar.
 - Linked script block changes to derived Scenes, Characters, Locations, sidebar items, statistics, and workbench cards.
+- Corrected the insertion interaction so toolbar clicks append directly to the script canvas, matching the reference workflow.
 
 ## In Progress
 
