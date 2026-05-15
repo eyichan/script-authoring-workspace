@@ -44,6 +44,7 @@ M2. Persistence foundation
 - Added `.env.example` to Git while keeping `.env.local` ignored for local runtime credentials.
 - Added database-backed script block insert, blur-save text update, duplicate, delete, and position resequencing.
 - Added database-backed Beats, Props, and Assets creation/import actions.
+- Added Playwright E2E coverage for project lifecycle, script block persistence, and Workbench persistence.
 
 ## In Progress
 
@@ -51,10 +52,10 @@ M2. Persistence foundation
 
 ## Next
 
-1. Add E2E coverage for create project, add scene, add character/dialogue, right-click duplicate/delete, workbench create/import, and refresh persistence.
-2. Add export/share/collaboration product states after persistence-backed editing is stable.
-3. Split the large workspace component once persistence behavior stabilizes.
-4. Add delete/edit flows for Beats, Props, and Assets if the product requires full CRUD rather than create-only module records.
+1. Add export/share/collaboration product states after persistence-backed editing is stable.
+2. Split the large workspace component once persistence behavior stabilizes.
+3. Add delete/edit flows for Beats, Props, and Assets if the product requires full CRUD rather than create-only module records.
+4. Expand E2E for character/dialogue and export/share once those flows become persisted product behavior.
 
 ## Verification Log
 
@@ -128,6 +129,13 @@ M2. Persistence foundation
   - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
   - Browser smoke test on `http://localhost:3001`: opened Beats and created `Beat 1: Pressure Turn`, opened Props and created `Continuity Tag 1`, opened Assets and imported `Imported still reference 1`.
   - Database verification query returned 1 beat, 1 prop, and 1 asset task for the active script; the asset task was `scene_dramatization` with status `done`.
+- After adding Playwright E2E coverage:
+  - `npm install -D @playwright/test dotenv`: succeeded; npm still reports 5 moderate advisories and no force fix was run.
+  - `npx playwright install chromium`: succeeded and installed the local Chromium browser binary.
+  - `npm run test:e2e`: succeeded; 2 tests passed covering persisted project create/trash/restore, scene block insert/save/refresh, right-click duplicate/delete resequencing, and Workbench Beat/Prop/Asset persistence.
+  - `npm test`: succeeded, 6 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded; `/` remains dynamic server-rendered on demand.
 
 ## Decisions
 

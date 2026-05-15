@@ -249,8 +249,10 @@ Baseline:
 Functional:
 
 - browser smoke tests for authoring workflow
+- Playwright E2E tests for persisted project, script block, and workbench flows
 - derived entity assertions, either unit tests or deterministic script checks
 - current deterministic tests live in `src/lib/domain/*.test.ts` and cover scene heading parsing, block insertion, text editing, duplicate/delete, empty scene rows, derived scene/character/location sync, and project lifecycle trash/restore behavior.
+- current E2E tests live in `tests/e2e/*.spec.ts` and run against a production `next start` server on port `3100`.
 
 Persistence:
 
@@ -260,6 +262,7 @@ Persistence:
 - Prisma Client generates
 - Seed writes deterministic workspace records
 - refresh preserves data
+- E2E tests assert Postgres rows after browser interactions
 
 ## Open Risks
 

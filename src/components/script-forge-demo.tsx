@@ -1137,6 +1137,7 @@ export function ScriptForgeDemo({
                       return withBlockMenu(
                         block,
                         <div
+                          data-testid={`script-block-${index + 1}`}
                           className="mb-[15px] mt-1 flex min-h-[29px] items-center gap-2 font-mono text-[16px] uppercase leading-[1.8]"
                         >
                           <div className="flex overflow-hidden rounded-md border border-[#e1e5e2] bg-[#f8faf9]">
@@ -1587,6 +1588,7 @@ function ProjectCard({
 }) {
   const card = (
     <div
+      data-testid={`project-card-${project.id}`}
       className={cn(
         "min-h-[160px] rounded-xl border border-[#deded8] bg-[#fcfdfc] p-4 shadow-[0_8px_24px_rgb(42_42_37/0.07)]",
         active && "border-[#b8d2bf] bg-[#f6fbf7]",
