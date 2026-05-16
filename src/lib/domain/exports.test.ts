@@ -46,6 +46,24 @@ const blocks: ScriptBlock[] = [
     createdAt: "2026-05-15T00:00:00.000Z",
     updatedAt: "2026-05-15T00:00:00.000Z",
   },
+  {
+    id: "block-5",
+    scriptId: "script-test",
+    type: "paren",
+    text: "quietly",
+    position: 5,
+    createdAt: "2026-05-15T00:00:00.000Z",
+    updatedAt: "2026-05-15T00:00:00.000Z",
+  },
+  {
+    id: "block-6",
+    scriptId: "script-test",
+    type: "transition",
+    text: "SMASH CUT TO:",
+    position: 6,
+    createdAt: "2026-05-15T00:00:00.000Z",
+    updatedAt: "2026-05-15T00:00:00.000Z",
+  },
 ];
 
 describe("script exports", () => {
@@ -57,6 +75,7 @@ describe("script exports", () => {
       fountain.indexOf("INT. TEST ROOM - DAY") < fountain.indexOf("A door opens."),
     );
     assert.match(fountain, /ADA\n\nWe are live\./);
+    assert.match(fountain, /> SMASH CUT TO:/);
   });
 
   it("formats Final Draft XML with escaped text", () => {
@@ -66,6 +85,7 @@ describe("script exports", () => {
     assert.match(xml, /Pilot &amp; Draft/);
     assert.match(xml, /<Paragraph Type="Scene Heading">/);
     assert.match(xml, /<Paragraph Type="Dialogue">/);
+    assert.match(xml, /<Paragraph Type="Transition">/);
   });
 
   it("builds export packages with useful filenames and mime types", () => {
@@ -86,6 +106,7 @@ describe("script exports", () => {
     assert.match(pdf, /^%PDF-1\.4/);
     assert.match(pdf, /\/Type \/Catalog/);
     assert.match(pdf, /INT\. TEST ROOM - DAY/);
+    assert.match(pdf, /SMASH CUT TO:/);
     assert.match(pdf, /startxref\n\d+\n%%EOF/);
   });
 });

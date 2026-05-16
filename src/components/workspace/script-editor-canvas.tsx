@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import {
+  ChevronDown,
   Copy,
   ExternalLink,
   Film,
@@ -35,9 +36,17 @@ import type {
   ScriptBlock,
   ScriptBlockType,
 } from "@/lib/domain/types";
+import {
+  commonTransitionOptions,
+  scenePrefixOptions,
+  sceneTimeOptions,
+} from "@/lib/domain/screenplay";
 import { cn } from "@/lib/utils";
 
-export type BlockInputElement = HTMLInputElement | HTMLTextAreaElement;
+export type BlockInputElement =
+  | HTMLInputElement
+  | HTMLSelectElement
+  | HTMLTextAreaElement;
 
 const scriptTools = [
   { label: "Scene", icon: Film },
@@ -62,9 +71,6 @@ const blockTypeToTool: Record<ScriptBlockType, ToolLabel> = {
   comment: "Comment",
   subtitle: "Subtitle",
 };
-
-const scenePrefixOptions = ["INT", "EXT"] as const;
-const sceneTimeOptions = ["DAY", "NIGHT"] as const;
 
 type ScriptEditorCanvasProps = {
   activeTool: ToolLabel;
@@ -130,6 +136,12 @@ function resizeBlockInput(input: HTMLTextAreaElement) {
   input.style.height = `${Math.max(input.scrollHeight, 29)}px`;
 }
 
+const sceneSelectClassName =
+  "h-8 appearance-none rounded-md border border-[#dfe4e1] bg-[#f8faf9] py-0 pl-2 pr-7 font-mono text-[13px] uppercase leading-none text-[#242421] outline-none transition-colors hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#2e6248]/15";
+
+const blockSelectClassName =
+  "h-8 appearance-none border-0 bg-transparent py-0 pl-0 pr-7 text-right font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none focus:bg-[#f9fbfa]";
+
 export function ScriptEditorCanvas({
   activeTool,
   blocks,
@@ -158,7 +170,9 @@ export function ScriptEditorCanvas({
     if (!input) return;
 
     input.focus();
-    input.select();
+    if (!(input instanceof HTMLSelectElement)) {
+      input.select();
+    }
     if (input instanceof HTMLTextAreaElement) {
       resizeBlockInput(input);
     }
@@ -228,25 +242,33 @@ export function ScriptEditorCanvas({
                 block,
                 <div
                   data-testid={`script-block-${index + 1}`}
-                  className="mb-[15px] mt-1 flex min-h-[29px] items-center gap-2 font-mono text-[16px] uppercase leading-[1.8]"
+                  className="mb-[15px] mt-1 flex min-h-[29px] items-center gap-2 font-mono text-[16px] uppercase leading-[1.8] max-[900px]:flex-wrap"
                 >
-                  <div className="flex overflow-hidden rounded-md border border-[#e1e5e2] bg-[#f8faf9]">
-                    {scenePrefixOptions.map((prefix) => (
-                      <button
-                        key={prefix}
-                        type="button"
-                        onClick={() =>
-                          onScenePartChange(block, { prefix }, true)
-                        }
-                        className={cn(
-                          "h-7 px-2 text-[13px] text-[#747c78] transition-colors hover:bg-white",
-                          scene.prefix === prefix &&
-                            "bg-white text-[#171a19] shadow-[inset_0_0_0_1px_rgb(46_98_72/0.16)]",
-                        )}
-                      >
-                        {prefix}.
-                      </button>
-                    ))}
+                  <div className="relative shrink-0">
+                    <label htmlFor={`scene-prefix-${block.id}`} className="sr-only">
+                      Scene prefix
+                    </label>
+                    <select
+                      id={`scene-prefix-${block.id}`}
+                      value={scene.prefix}
+                      aria-label={`scene prefix block ${index + 1}`}
+                      onFocus={() => onBlockFocus(block.id, "Scene")}
+                      onChange={(event) =>
+                        onScenePartChange(
+                          block,
+                          { prefix: event.target.value },
+                          true,
+                        )
+                      }
+                      className={cn(sceneSelectClassName, "w-[112px]")}
+                    >
+                      {scenePrefixOptions.map((prefix) => (
+                        <option key={prefix.value} value={prefix.value}>
+                          {prefix.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-[#767d79]" />
                   </div>
                   <label htmlFor={sceneLocationId} className="sr-only">
                     Scene location
@@ -272,23 +294,36 @@ export function ScriptEditorCanvas({
                     className="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
                   />
                   <span className="text-[#a0a6a2]">-</span>
-                  <div className="flex overflow-hidden rounded-md border border-[#e1e5e2] bg-[#f8faf9]">
-                    {sceneTimeOptions.map((timeOfDay) => (
-                      <button
-                        key={timeOfDay}
-                        type="button"
-                        onClick={() =>
-                          onScenePartChange(block, { timeOfDay }, true)
-                        }
-                        className={cn(
-                          "h-7 px-2 text-[13px] text-[#747c78] transition-colors hover:bg-white",
-                          scene.timeOfDay === timeOfDay &&
-                            "bg-white text-[#171a19] shadow-[inset_0_0_0_1px_rgb(46_98_72/0.16)]",
-                        )}
-                      >
-                        {timeOfDay}
-                      </button>
-                    ))}
+                  <div className="relative shrink-0">
+                    <label htmlFor={`scene-time-${block.id}`} className="sr-only">
+                      Scene time
+                    </label>
+                    <select
+                      id={`scene-time-${block.id}`}
+                      value={scene.timeOfDay}
+                      aria-label={`scene time block ${index + 1}`}
+                      onFocus={() => onBlockFocus(block.id, "Scene")}
+                      onChange={(event) =>
+                        onScenePartChange(
+                          block,
+                          { timeOfDay: event.target.value },
+                          true,
+                        )
+                      }
+                      className={cn(sceneSelectClassName, "w-[162px]")}
+                    >
+                      {!sceneTimeOptions.some(
+                        (timeOfDay) => timeOfDay.value === scene.timeOfDay,
+                      ) ? (
+                        <option value={scene.timeOfDay}>{scene.timeOfDay}</option>
+                      ) : null}
+                      {sceneTimeOptions.map((timeOfDay) => (
+                        <option key={timeOfDay.value} value={timeOfDay.value}>
+                          {timeOfDay.value}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-[#767d79]" />
                   </div>
                 </div>,
               );
@@ -321,7 +356,7 @@ export function ScriptEditorCanvas({
                     }
                     onBlur={(event) => onBlockBlur(block, event.currentTarget)}
                     onKeyDown={(event) => onBlockKeyDown(block, event)}
-                    className="block w-full border-0 bg-transparent p-0 text-center font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]"
+                    className="block ml-[220px] w-[250px] max-w-[calc(100%_-_220px)] border-0 bg-transparent p-0 text-left font-mono text-[16px] uppercase leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa] max-[900px]:ml-[28%] max-[900px]:max-w-[72%]"
                   />
                   <datalist id={listId}>
                     {characters.map((character) => (
@@ -331,6 +366,53 @@ export function ScriptEditorCanvas({
                       />
                     ))}
                   </datalist>
+                </div>,
+              );
+            }
+
+            if (block.type === "transition") {
+              const transitionFieldId = `transition-${block.id}`;
+              const transitionIsCommon = commonTransitionOptions.includes(
+                block.text as (typeof commonTransitionOptions)[number],
+              );
+
+              return withBlockMenu(
+                block,
+                <div className="mb-5 mt-5 flex justify-end">
+                  <label htmlFor={transitionFieldId} className="sr-only">
+                    Transition
+                  </label>
+                  <div className="relative w-[260px] max-w-full">
+                    <select
+                      ref={(node) => {
+                        blockInputRefs.current[block.id] = node;
+                      }}
+                      id={transitionFieldId}
+                      name={transitionFieldId}
+                      aria-label={`transition block ${index + 1}`}
+                      value={transitionIsCommon ? block.text : "__custom"}
+                      onFocus={() => onBlockFocus(block.id, "Transition")}
+                      onChange={(event) => {
+                        if (event.target.value === "__custom") return;
+                        onBlockChange(block.id, event.target.value);
+                      }}
+                      onBlur={(event) =>
+                        onBlockBlur(block, event.currentTarget)
+                      }
+                      onKeyDown={(event) => onBlockKeyDown(block, event)}
+                      className={cn(blockSelectClassName, "w-full")}
+                    >
+                      {!transitionIsCommon ? (
+                        <option value="__custom">{block.text || "CUSTOM"}</option>
+                      ) : null}
+                      {commonTransitionOptions.map((transition) => (
+                        <option key={transition} value={transition}>
+                          {transition}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-[#767d79]" />
+                  </div>
                 </div>,
               );
             }
@@ -368,9 +450,13 @@ export function ScriptEditorCanvas({
                     "block w-full resize-none overflow-hidden border-0 bg-transparent p-0 font-mono text-[16px] leading-[1.8] text-[#242421] outline-none placeholder:text-[#aeb6b2] focus:bg-[#f9fbfa]",
                     "mb-[15px] whitespace-pre-wrap",
                     block.type === "paren" &&
-                      "m-0 text-center italic text-[#74746f]",
-                    block.type === "dialogue" && "mx-auto max-w-[470px]",
-                    block.type === "transition" && "mb-5",
+                      "mb-0 ml-[144px] max-w-[240px] text-left text-[#5f6662] max-[900px]:ml-[18%] max-[900px]:max-w-[64%]",
+                    block.type === "dialogue" &&
+                      "ml-[96px] max-w-[336px] max-[900px]:ml-[12%] max-[900px]:max-w-[76%]",
+                    block.type === "comment" &&
+                      "rounded-md border border-dashed border-[#d9dedb] bg-[#f3f6f4]/70 px-2 py-1 text-[#66706b]",
+                    block.type === "subtitle" &&
+                      "ml-[96px] max-w-[420px] text-[#3e5950] max-[900px]:ml-[12%] max-[900px]:max-w-[76%]",
                   )}
                 />
               </>,

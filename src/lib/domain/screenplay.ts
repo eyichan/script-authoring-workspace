@@ -6,7 +6,54 @@ import type {
   ScriptBlock,
 } from "./types";
 
-const SCENE_PREFIX_PATTERN = /^(INT\.?|EXT\.?|INT\/EXT\.?|I\/E\.?)\s+(.+?)(?:\s+-\s+(.+))?$/i;
+export const scenePrefixOptions = [
+  { value: "INT", label: "INT.", description: "Interior" },
+  { value: "EXT", label: "EXT.", description: "Exterior" },
+  { value: "INT./EXT", label: "INT./EXT.", description: "Interior to exterior" },
+  { value: "EXT./INT", label: "EXT./INT.", description: "Exterior to interior" },
+  { value: "I/E", label: "I/E.", description: "Interior/exterior" },
+  { value: "EST", label: "EST.", description: "Establishing" },
+] as const;
+
+export const sceneTimeOptions = [
+  { value: "DAY", description: "Daytime" },
+  { value: "NIGHT", description: "Nighttime" },
+  { value: "DAY/NIGHT", description: "Day into night" },
+  { value: "MORNING", description: "Morning" },
+  { value: "AFTERNOON", description: "Afternoon" },
+  { value: "EVENING", description: "Evening" },
+  { value: "NOON", description: "Noon" },
+  { value: "DAWN", description: "Dawn" },
+  { value: "DUSK", description: "Dusk" },
+  { value: "SUNRISE", description: "Sunrise" },
+  { value: "SUNSET", description: "Sunset" },
+  { value: "LATER", description: "Later" },
+  { value: "CONTINUOUS", description: "Continuous" },
+  { value: "MOMENTS LATER", description: "Moments later" },
+  { value: "SAME TIME", description: "Same time" },
+] as const;
+
+export const commonTransitionOptions = [
+  "CUT TO:",
+  "SMASH CUT TO:",
+  "JUMP CUT TO:",
+  "MATCH CUT TO:",
+  "HARD CUT TO:",
+  "FLASH CUT TO:",
+  "DISSOLVE TO:",
+  "FADE TO:",
+  "FADE IN:",
+  "FADE OUT.",
+  "FADE TO BLACK.",
+  "WIPE TO:",
+  "IRIS IN:",
+  "IRIS OUT:",
+  "BACK TO:",
+] as const;
+
+export type ScenePrefixOption = (typeof scenePrefixOptions)[number]["value"];
+
+const SCENE_PREFIX_PATTERN = /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\/EXT\.?|EXT\/INT\.?|INT\.?|EXT\.?|I\/E\.?|EST\.?)\s+(.+?)(?:\s+-\s+(.+))?$/i;
 
 export function canonicalizeName(value: string): string {
   return value.trim().replace(/\s+/g, " ").toUpperCase();
@@ -16,6 +63,30 @@ export function makeEntityId(prefix: string, canonicalName: string): string {
   return `${prefix}-${canonicalName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
 }
 
+export function normalizeScenePrefix(value: string): ScenePrefixOption {
+  const prefix = value.trim().toUpperCase().replace(/\.$/, "");
+
+  if (/^INT\.?\/EXT$/.test(prefix) || prefix === "INT/EXT") {
+    return "INT./EXT";
+  }
+
+  if (/^EXT\.?\/INT$/.test(prefix) || prefix === "EXT/INT") {
+    return "EXT./INT";
+  }
+
+  if (prefix === "EXT") return "EXT";
+  if (prefix === "I/E") return "I/E";
+  if (prefix === "EST") return "EST";
+
+  return "INT";
+}
+
+export function formatScenePrefix(prefix: string): string {
+  const normalized = normalizeScenePrefix(prefix);
+
+  return normalized.endsWith(".") ? normalized : `${normalized}.`;
+}
+
 export function parseSceneHeading(text: string): SceneHeadingParts | null {
   const normalized = text.trim().replace(/\s+/g, " ");
   const match = normalized.match(SCENE_PREFIX_PATTERN);
@@ -23,14 +94,14 @@ export function parseSceneHeading(text: string): SceneHeadingParts | null {
   if (!match) return null;
 
   return {
-    prefix: match[1].replace(/\.$/, "").toUpperCase(),
+    prefix: normalizeScenePrefix(match[1]),
     locationName: canonicalizeName(match[2]),
     timeOfDay: canonicalizeName(match[3] ?? "DAY"),
   };
 }
 
 export function formatSceneHeading(parts: SceneHeadingParts): string {
-  return `${parts.prefix}. ${parts.locationName} - ${parts.timeOfDay}`;
+  return `${formatScenePrefix(parts.prefix)} ${parts.locationName} - ${parts.timeOfDay}`;
 }
 
 export function deriveScriptEntities(scriptId: string, blocks: ScriptBlock[]) {

@@ -62,6 +62,9 @@ M5 complete. Functional script workspace is implemented and verified.
 - Extracted the Workbench tabs, Beats page, derived Workbench page views, and locked Storyboard view into `src/components/workspace/workbench-pages.tsx`.
 - Extracted the workspace sidebar navigation, project title control, side lists, and user footer into `src/components/workspace/workspace-sidebar.tsx`.
 - Extracted the app top bar and main workspace header into `src/components/workspace/workspace-headers.tsx`.
+- Updated screenplay formatting controls to use shared Scene prefix/time and Transition option lists, including broader Scene choices and common industry transition presets.
+- Adjusted Script canvas and export formatting so Character, Dialogue, Parenthetical, and Transition blocks use screenplay-style indentation/alignment.
+- Verified the formatting control update with `npm test`, `npm run lint`, `npm run build`, and a browser smoke check on `http://localhost:3101`.
 
 ## In Progress
 

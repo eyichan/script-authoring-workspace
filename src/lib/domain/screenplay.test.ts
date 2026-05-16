@@ -59,9 +59,15 @@ describe("screenplay domain", () => {
     });
 
     assert.deepEqual(parseSceneHeading("INT/EXT. TRAIN CAR"), {
-      prefix: "INT/EXT",
+      prefix: "INT./EXT",
       locationName: "TRAIN CAR",
       timeOfDay: "DAY",
+    });
+
+    assert.deepEqual(parseSceneHeading("est. city skyline - dawn"), {
+      prefix: "EST",
+      locationName: "CITY SKYLINE",
+      timeOfDay: "DAWN",
     });
 
     assert.equal(
@@ -71,6 +77,15 @@ describe("screenplay domain", () => {
         timeOfDay: "NIGHT",
       }),
       "INT. MOON BASE - NIGHT",
+    );
+
+    assert.equal(
+      formatSceneHeading({
+        prefix: "INT./EXT",
+        locationName: "TRAIN CAR",
+        timeOfDay: "CONTINUOUS",
+      }),
+      "INT./EXT. TRAIN CAR - CONTINUOUS",
     );
   });
 

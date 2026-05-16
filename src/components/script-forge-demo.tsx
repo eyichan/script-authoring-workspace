@@ -65,6 +65,7 @@ import { buildScriptExport } from "@/lib/domain/exports";
 import {
   deriveScriptEntities,
   formatSceneHeading,
+  scenePrefixOptions,
   parseSceneHeading,
 } from "@/lib/domain/screenplay";
 import {
@@ -187,9 +188,14 @@ function normalizeBlockText(type: ScriptBlockType, value: string): string {
 
 function getSceneDraft(text: string): SceneHeadingParts {
   const parsed = parseSceneHeading(text);
+  const parsedPrefix = scenePrefixOptions.some(
+    (option) => option.value === parsed?.prefix,
+  )
+    ? parsed?.prefix
+    : undefined;
 
   return {
-    prefix: parsed?.prefix === "EXT" ? "EXT" : "INT",
+    prefix: parsedPrefix ?? "INT",
     locationName: parsed?.locationName ?? "",
     timeOfDay: parsed?.timeOfDay ?? "DAY",
   };

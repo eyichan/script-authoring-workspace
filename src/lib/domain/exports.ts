@@ -92,7 +92,7 @@ function formatFountainBlock(block: ScriptBlock): string {
     case "dialogue":
       return text;
     case "transition":
-      return text.toUpperCase();
+      return `> ${text.toUpperCase()}`;
     case "comment":
       return `[[${text}]]`;
     case "subtitle":
@@ -155,9 +155,9 @@ export function formatPrintableHtml(title: string, blocks: ScriptBlock[]): strin
     "    h1 { font-size: 14pt; text-align: center; margin-bottom: 2rem; }",
     "    p { margin: 0 0 1rem; white-space: pre-wrap; }",
     "    .block-scene, .block-transition, .block-character { text-transform: uppercase; }",
-    "    .block-character { text-align: center; margin-top: 1.5rem; margin-bottom: 0.25rem; }",
-    "    .block-dialogue { margin-left: 1.5in; max-width: 3.6in; }",
-    "    .block-paren { margin-left: 1.25in; font-style: italic; }",
+    "    .block-character { margin-left: 2.3in; margin-top: 1.5rem; margin-bottom: 0.25rem; }",
+    "    .block-dialogue { margin-left: 1in; max-width: 3.5in; }",
+    "    .block-paren { margin-left: 1.5in; max-width: 2.5in; }",
     "    .block-transition { text-align: right; }",
     "    @media print { body { margin: 0.75in; } }",
     "  </style>",
@@ -171,7 +171,7 @@ export function formatPrintableHtml(title: string, blocks: ScriptBlock[]): strin
   ].join("\n");
 }
 
-function wrapPdfLine(value: string, limit = 78): string[] {
+function wrapPdfLine(value: string, limit = 60): string[] {
   const normalized = value.replace(/\s+/g, " ").trim();
 
   if (!normalized) return [""];
@@ -201,6 +201,16 @@ function wrapPdfLine(value: string, limit = 78): string[] {
   return lines;
 }
 
+function indentPdfLines(lines: string[], indent = 0): string[] {
+  const prefix = " ".repeat(indent);
+
+  return lines.map((line) => `${prefix}${line}`);
+}
+
+function rightAlignPdfLines(lines: string[], width = 60): string[] {
+  return lines.map((line) => line.padStart(width));
+}
+
 function formatPdfBlock(block: ScriptBlock): string[] {
   const text = block.text.trim();
 
@@ -208,17 +218,23 @@ function formatPdfBlock(block: ScriptBlock): string[] {
 
   switch (block.type) {
     case "scene":
-    case "character":
-    case "transition":
       return wrapPdfLine(text.toUpperCase());
+    case "character":
+      return indentPdfLines(wrapPdfLine(text.toUpperCase(), 28), 23);
+    case "transition":
+      return rightAlignPdfLines(wrapPdfLine(text.toUpperCase(), 24));
     case "paren":
-      return wrapPdfLine(text.startsWith("(") ? text : `(${text})`);
+      return indentPdfLines(
+        wrapPdfLine(text.startsWith("(") ? text : `(${text})`, 25),
+        15,
+      );
     case "comment":
       return wrapPdfLine(`[[${text}]]`);
     case "subtitle":
-      return wrapPdfLine(`[[SUBTITLE: ${text}]]`);
-    case "action":
+      return indentPdfLines(wrapPdfLine(`SUBTITLE: ${text}`, 42), 10);
     case "dialogue":
+      return indentPdfLines(wrapPdfLine(text, 35), 10);
+    case "action":
       return wrapPdfLine(text);
   }
 }
