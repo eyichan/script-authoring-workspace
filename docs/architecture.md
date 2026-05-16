@@ -152,8 +152,10 @@ Current UI behavior:
 - Adding or editing a character block creates or reuses the derived character.
 - Adding dialogue after a character increases the derived character and scene dialogue counts.
 - Script blocks expose a right-click context menu with `Open`, `Duplicate`, and `Delete`.
+- Script block `Open` is routed by the top-level workspace shell: scene blocks navigate to the Scenes workbench and select the derived scene, while character, dialogue, and parenthetical blocks navigate to the Characters workbench and select the linked character cue.
 - Duplicate and Delete mutate the source block list, then derived Scenes, Characters, and Locations recalculate from the remaining ordered blocks.
 - Workbench pages receive derived cards instead of static mock cards.
+- Workbench pages receive the active derived item id from the shell and render selected row/card highlighting so cross-page navigation can reveal the target entity.
 - Beats is a manual outline page with local `Beat` creation, sidebar sync, and card/list rendering.
 - Props is a manual production-memory page; `New Prop` creates local `Prop` records instead of mock counters.
 - Assets is a generated/imported task page; `Import` creates local `AssetTask` records and supports still/video tab filtering by title.

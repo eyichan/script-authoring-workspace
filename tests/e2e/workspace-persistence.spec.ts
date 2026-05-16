@@ -153,9 +153,9 @@ test("persists character and dialogue authoring flow", async ({ page }) => {
   await page.getByRole("button", { name: "New Project" }).click({ force: true });
   await expect(page.getByLabel("Project title")).toHaveValue(/Untitled Script/);
 
-  await page.locator("button").filter({ hasText: /^Character$/ }).last().click({
-    force: true,
-  });
+  const characterTool = page.locator("button").filter({ hasText: /^Character$/ }).last();
+  await expect(characterTool).toBeEnabled();
+  await characterTool.click({ force: true });
   await page.getByLabel(/character block 1/i).fill("Ada Lovelace");
   await page.getByLabel(/character block 1/i).press("Enter");
 
@@ -182,6 +182,52 @@ test("persists character and dialogue authoring flow", async ({ page }) => {
   await page.reload();
   await page.getByRole("button", { name: "Characters" }).click({ force: true });
   await expect(page.getByRole("button", { name: /ADA LOVELACE/ })).toBeVisible();
+});
+
+test("opens script blocks in matching workbench destinations", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  await page.getByRole("button", { name: "Scene", exact: true }).click({ force: true });
+  await page.getByRole("textbox", { name: /scene location block 1/i }).fill("open bridge");
+  await page.locator('[data-testid^="script-block-"]').first().click({
+    button: "right",
+    force: true,
+  });
+  await page.getByRole("menuitem", { name: "Open" }).click();
+  await expect(page.getByText("Scene Board")).toBeVisible();
+  await expect(page.locator("main .ring-2")).toHaveCount(1);
+
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  await page.locator("button").filter({ hasText: /^Character$/ }).last().click({
+    force: true,
+  });
+  const characterInput = page.locator('input[aria-label^="character block"]').first();
+  await characterInput.fill("Kai Navigator");
+  await characterInput.press("Enter");
+
+  const dialogueInput = page.locator('textarea[aria-label^="dialogue block"]').first();
+  await dialogueInput.fill("The map points back to us.");
+
+  await characterInput.click({
+    button: "right",
+    force: true,
+  });
+  await page.getByRole("menuitem", { name: "Open" }).click();
+  await expect(page.getByText("Characters").first()).toBeVisible();
+  await expect(page.locator("main .ring-2")).toHaveCount(1);
+
+  await clickButtonByText(page, "Script");
+  await page.locator('textarea[aria-label^="dialogue block"]').first().click({
+    button: "right",
+    force: true,
+  });
+  await page.getByRole("menuitem", { name: "Open" }).click();
+  await expect(page.getByText("Characters").first()).toBeVisible();
+  await expect(page.locator("main .ring-2")).toHaveCount(1);
 });
 
 test("persists script blocks and workbench records across refresh", async ({ page }) => {

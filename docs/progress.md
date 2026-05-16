@@ -65,10 +65,13 @@ M5 complete. Functional script workspace is implemented and verified.
 - Updated screenplay formatting controls to use shared Scene prefix/time and Transition option lists, including broader Scene choices and common industry transition presets.
 - Adjusted Script canvas and export formatting so Character, Dialogue, Parenthetical, and Transition blocks use screenplay-style indentation/alignment.
 - Verified the formatting control update with `npm test`, `npm run lint`, `npm run build`, and a browser smoke check on `http://localhost:3101`.
+- Routed Script block `Open` actions to their matching workbench destinations: scene blocks open the Scenes workbench, while character, dialogue, and parenthetical blocks open the linked Character card.
+- Added selected row/card highlighting in the workbench so sidebar selection and Script `Open` navigation reveal the active derived entity.
+- Added E2E coverage for Script context-menu `Open` navigation into Scenes and Characters.
 
 ## In Progress
 
-- No blocking implementation milestone is active.
+- Laper reference-aligned workspace detail expansion is active. The first slice, Script `Open` navigation into existing workbench pages, is complete.
 
 ## Next
 
@@ -118,6 +121,12 @@ M5 complete. Functional script workspace is implemented and verified.
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
   - Playwright smoke test succeeded: Home opened Recents, `New Project` created `Untitled Script 4`, `Open` switched the workspace title to the new project, `Delete` moved it to Trash, `Restore` returned it to Active, and console warning/error count stayed at 0.
+- After routing Script `Open` actions into workbench pages:
+  - `npx playwright test tests/e2e/workspace-persistence.spec.ts -g "opens script blocks"`: succeeded, 1 test passed.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
+  - `npm run test:e2e`: succeeded, 7 tests passed.
 - After adding Prisma/Postgres persistence foundation:
   - `docker compose up -d postgres`: succeeded; `script-authoring-postgres` is healthy.
   - `npx prisma migrate dev --name init` failed with `localhost:54329` (`P1001`) but succeeded after switching the connection string to `127.0.0.1:54329`.

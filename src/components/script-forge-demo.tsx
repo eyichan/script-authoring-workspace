@@ -640,6 +640,71 @@ export function ScriptForgeDemo({
     setPendingFocusBlockId(blockId);
   };
 
+  const getLinkedCharacterId = (block: ScriptBlock) => {
+    if (block.type === "character") {
+      return derived.characters.find((character) =>
+        character.sourceBlockIds.includes(block.id),
+      )?.id;
+    }
+
+    if (block.type !== "dialogue" && block.type !== "paren") {
+      return undefined;
+    }
+
+    const orderedBlocks = [...blocks].sort((first, second) => first.position - second.position);
+    const blockIndex = orderedBlocks.findIndex((current) => current.id === block.id);
+
+    for (let index = blockIndex - 1; index >= 0; index -= 1) {
+      const candidate = orderedBlocks[index];
+
+      if (candidate.type === "scene") {
+        return undefined;
+      }
+
+      if (candidate.type === "character") {
+        return derived.characters.find((character) =>
+          character.sourceBlockIds.includes(candidate.id),
+        )?.id;
+      }
+    }
+
+    return undefined;
+  };
+
+  const openBlockDestination = (blockId: string) => {
+    const block = blocks.find((current) => current.id === blockId);
+
+    if (!block) {
+      focusBlockById(blockId);
+      return;
+    }
+
+    setActiveBlockId(block.id);
+    setPendingFocusBlockId(null);
+
+    if (block.type === "scene") {
+      const scene = derived.scenes.find((current) => current.sourceBlockId === block.id);
+
+      if (scene) {
+        setActivePage("Scenes");
+        setEditorTab("script");
+        setActiveScene(scene.id);
+        return;
+      }
+    }
+
+    const characterId = getLinkedCharacterId(block);
+
+    if (characterId) {
+      setActivePage("Characters");
+      setEditorTab("script");
+      setActiveScene(characterId);
+      return;
+    }
+
+    focusBlockById(blockId);
+  };
+
   const handleDuplicateScriptBlock = (block: ScriptBlock) => {
     setActiveTool(blockTypeToTool[block.type]);
 
@@ -950,7 +1015,7 @@ export function ScriptForgeDemo({
             if (page !== "Script") setEditorTab("script");
           }}
           onSelectSidebarItem={(itemId) => {
-            if (activePage === "Script" || activePage === "Scenes") {
+            if (activePage === "Script") {
               focusSourceBlock(itemId);
               return;
             }
@@ -1015,6 +1080,7 @@ export function ScriptForgeDemo({
                 additions={mockAdditions[activePage]}
                 message={workbenchMessage}
                 generatedStills={generatedStills}
+                activeItemId={activeScene}
                 onGenerateStill={(sceneId) =>
                   setGeneratedStills((current) =>
                     current.includes(sceneId)
@@ -1057,7 +1123,7 @@ export function ScriptForgeDemo({
                 onDeleteBlock={handleDeleteScriptBlock}
                 onDuplicateBlock={handleDuplicateScriptBlock}
                 onInsertBlock={handleInsertScriptBlock}
-                onOpenBlock={focusBlockById}
+                onOpenBlock={openBlockDestination}
                 onPendingFocusHandled={() => setPendingFocusBlockId(null)}
                 onScenePartChange={handleScenePartChange}
               />

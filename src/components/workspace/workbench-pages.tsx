@@ -237,6 +237,7 @@ export function BeatsPage({
 export function WorkbenchPage({
   page,
   activeTab,
+  activeItemId,
   additions,
   message,
   generatedStills,
@@ -249,6 +250,7 @@ export function WorkbenchPage({
 }: {
   page: WorkbenchPageName;
   activeTab: string;
+  activeItemId: string;
   additions: number;
   message: string;
   generatedStills: string[];
@@ -288,9 +290,14 @@ export function WorkbenchPage({
     >
       {isScenes ? (
         activeTab === "Scene List" ? (
-          <SceneList scenes={scenes} generatedStills={generatedStills} />
+          <SceneList
+            activeItemId={activeItemId}
+            scenes={scenes}
+            generatedStills={generatedStills}
+          />
         ) : (
           <SceneCards
+            activeItemId={activeItemId}
             scenes={scenes}
             generatedStills={generatedStills}
             onGenerateStill={onGenerateStill}
@@ -299,6 +306,7 @@ export function WorkbenchPage({
       ) : activeTab === "Overview" || page === "Assets" ? (
         <WorkbenchCardGrid
           cards={filteredCards}
+          activeItemId={activeItemId}
           message={message}
           mutationPending={mutationPending}
           page={page}
@@ -333,9 +341,11 @@ export function LockedStoryboard() {
 }
 
 function SceneList({
+  activeItemId,
   scenes,
   generatedStills,
 }: {
+  activeItemId: string;
   scenes: DerivedScene[];
   generatedStills: string[];
 }) {
@@ -344,7 +354,10 @@ function SceneList({
       {scenes.map((scene, index) => (
         <div
           key={scene.id}
-          className="grid grid-cols-[44px_minmax(0,1fr)_88px_120px] items-center gap-3 border-b border-[#eeeeea] px-4 py-3 text-[13px] last:border-b-0"
+          className={cn(
+            "grid grid-cols-[44px_minmax(0,1fr)_88px_120px] items-center gap-3 border-b border-[#eeeeea] px-4 py-3 text-[13px] last:border-b-0",
+            activeItemId === scene.id && "bg-[#f1f5f2]",
+          )}
         >
           <span className="text-[#8b8b84]">#{index + 1}</span>
           <strong className="truncate font-medium">{scene.heading}</strong>
@@ -361,10 +374,12 @@ function SceneList({
 }
 
 function SceneCards({
+  activeItemId,
   scenes,
   generatedStills,
   onGenerateStill,
 }: {
+  activeItemId: string;
   scenes: DerivedScene[];
   generatedStills: string[];
   onGenerateStill: (sceneId: string) => void;
@@ -374,7 +389,10 @@ function SceneCards({
       {scenes.map((scene, index) => (
         <div
           key={scene.id}
-          className="rounded-xl border border-[#deded8] bg-white p-5 shadow-[0_8px_24px_rgb(42_42_37/0.08)]"
+          className={cn(
+            "rounded-xl border border-[#deded8] bg-white p-5 shadow-[0_8px_24px_rgb(42_42_37/0.08)]",
+            activeItemId === scene.id && "border-[#b9c7bd] ring-2 ring-[#dfe8e2]",
+          )}
         >
           <div className="mb-5 flex items-start justify-between">
             <div>
@@ -421,6 +439,7 @@ function SceneCards({
 
 function WorkbenchCardGrid({
   cards,
+  activeItemId,
   message,
   mutationPending,
   page,
@@ -428,6 +447,7 @@ function WorkbenchCardGrid({
   onUpdateCard,
 }: {
   cards: WorkbenchCard[];
+  activeItemId: string;
   message: string;
   mutationPending: boolean;
   page: WorkbenchPageName;
@@ -439,7 +459,10 @@ function WorkbenchCardGrid({
       {cards.map((card) => (
         <div
           key={card.id}
-          className="min-h-[150px] rounded-xl border border-[#deded8] bg-[#fcfdfc] p-4 shadow-[0_8px_24px_rgb(42_42_37/0.07)]"
+          className={cn(
+            "min-h-[150px] rounded-xl border border-[#deded8] bg-[#fcfdfc] p-4 shadow-[0_8px_24px_rgb(42_42_37/0.07)]",
+            activeItemId === card.id && "border-[#b9c7bd] ring-2 ring-[#dfe8e2]",
+          )}
         >
           <div className="mb-4 flex items-center justify-between">
             <div className="grid size-9 place-items-center rounded-lg bg-[#eef3ef] text-[#2e6248]">
