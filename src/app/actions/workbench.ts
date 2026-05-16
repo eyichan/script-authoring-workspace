@@ -12,6 +12,10 @@ import {
   updateAssetSnapshot,
   updateBeatSnapshot,
   updatePropSnapshot,
+  updateScriptOutlineSnapshot,
+  upsertCharacterProfileSnapshot,
+  upsertLocationProfileSnapshot,
+  upsertSceneProductionNoteSnapshot,
 } from "@/lib/db/workspace";
 
 export async function createBeatAction(input: {
@@ -100,6 +104,71 @@ export async function updateAssetAction(input: {
   title: string;
 }) {
   const snapshot = await updateAssetSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function upsertCharacterProfileAction(input: {
+  projectId: string;
+  scriptId: string;
+  characterId: string;
+  displayName: string;
+  color: string;
+  gender: string;
+  age: string;
+  role: string;
+  bio: string;
+  appearanceNotes: string;
+}) {
+  const snapshot = await upsertCharacterProfileSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function upsertSceneProductionNoteAction(input: {
+  projectId: string;
+  scriptId: string;
+  sceneId: string;
+  description: string;
+  artRequirements: string;
+  stillStatus: string;
+  videoStatus: string;
+}) {
+  const snapshot = await upsertSceneProductionNoteSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function upsertLocationProfileAction(input: {
+  projectId: string;
+  scriptId: string;
+  locationId: string;
+  displayName: string;
+  address: string;
+  description: string;
+  scoutingStatus: string;
+  ownerName: string;
+  phone: string;
+  email: string;
+  dailyRental: string;
+  deposit: string;
+  currency: string;
+  availableFrom: string;
+  availableUntil: string;
+  shootingHours: string;
+  notes: string;
+}) {
+  const snapshot = await upsertLocationProfileSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function updateScriptOutlineAction(input: {
+  projectId: string;
+  scriptId: string;
+  text: string;
+}) {
+  const snapshot = await updateScriptOutlineSnapshot(input);
   revalidatePath("/");
   return snapshot;
 }

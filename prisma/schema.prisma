@@ -72,16 +72,20 @@ model ProjectCollaborator {
 }
 
 model Script {
-  id         String        @id
-  projectId  String
-  title      String
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  blocks     ScriptBlock[]
-  beats      Beat[]
-  props      Prop[]
-  assetTasks AssetTask[]
+  id                   String                @id
+  projectId            String
+  title                String
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  blocks               ScriptBlock[]
+  beats                Beat[]
+  props                Prop[]
+  assetTasks           AssetTask[]
+  characterProfiles    CharacterProfile[]
+  sceneProductionNotes SceneProductionNote[]
+  locationProfiles     LocationProfile[]
+  outline              ScriptOutline?
 
   @@index([projectId])
 }
@@ -107,6 +111,7 @@ model Beat {
   description     String
   color           String
   durationMinutes Int
+  sortOrder       Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   script          Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
@@ -118,6 +123,7 @@ model Prop {
   id          String   @id
   scriptId    String
   name        String
+  themeColor  String   @default("racing-green")
   category    String
   description String
   imageNote   String
@@ -126,6 +132,75 @@ model Prop {
   script      Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
 
   @@index([scriptId])
+}
+
+model CharacterProfile {
+  id              String   @id
+  scriptId        String
+  characterId     String
+  displayName     String
+  color           String   @default("racing-green")
+  gender          String   @default("Not Set")
+  age             String   @default("")
+  role            String   @default("")
+  bio             String   @default("")
+  appearanceNotes String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  script          Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptId, characterId])
+  @@index([scriptId])
+}
+
+model SceneProductionNote {
+  id              String   @id
+  scriptId        String
+  sceneId         String
+  description     String   @default("")
+  artRequirements String   @default("")
+  stillStatus     String   @default("Pending")
+  videoStatus     String   @default("Pending")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  script          Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptId, sceneId])
+  @@index([scriptId])
+}
+
+model LocationProfile {
+  id              String   @id
+  scriptId        String
+  locationId      String
+  displayName     String
+  address         String   @default("")
+  description     String   @default("")
+  scoutingStatus  String   @default("Pending")
+  ownerName       String   @default("")
+  phone           String   @default("")
+  email           String   @default("")
+  dailyRental     String   @default("")
+  deposit         String   @default("")
+  currency        String   @default("USD")
+  availableFrom   String   @default("")
+  availableUntil  String   @default("")
+  shootingHours   String   @default("")
+  notes           String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  script          Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptId, locationId])
+  @@index([scriptId])
+}
+
+model ScriptOutline {
+  scriptId  String   @id
+  text      String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  script    Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
 }
 
 model AssetTask {

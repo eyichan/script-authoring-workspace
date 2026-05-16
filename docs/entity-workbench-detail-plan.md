@@ -29,11 +29,14 @@ Implemented:
 - Selected workbench entities are highlighted after Script `Open` and sidebar selection.
 - Beats now exposes Arrangement, Beats, and Outline tab surfaces.
 - Characters, Props, Locations, Scenes, and Assets expose page-specific tab surfaces instead of generic placeholders.
+- Prisma persistence now includes `CharacterProfile`, `SceneProductionNote`, `LocationProfile`, and `ScriptOutline`.
+- `Beat` and `Prop` include the additional fields needed by the reference-aligned edit surfaces.
+- Server actions exist for upserting Character, Scene, Location, and Outline metadata.
 
 Missing:
 
 - Workbench detail dialogs for Characters, Scenes, Locations, and Props.
-- Metadata persistence for derived entity details.
+- UI wiring from detail dialogs into the new metadata persistence actions.
 - Full Beat inline description, color, duration, and Outline persistence.
 - Script Cover editable fields.
 - Collaboration remains reachable, but the current work does not add new collaboration tab behavior.
@@ -350,6 +353,8 @@ Verification:
 - E2E: create/edit profile, refresh, verify card fields persist.
 - E2E: script-derived character still appears without a profile.
 
+Status: persistence foundation complete. Detail dialog UI and E2E persistence coverage remain.
+
 ### Slice 4: Location Scout Metadata
 
 - Add `LocationProfile` persistence.
@@ -359,6 +364,8 @@ Verification:
 Verification:
 
 - E2E: edit scouting status/contact/cost fields, refresh, verify.
+
+Status: persistence foundation complete. Detail dialog UI and E2E persistence coverage remain.
 
 ### Slice 5: Prop Detail Dialog Alignment
 

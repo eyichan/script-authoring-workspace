@@ -50,6 +50,10 @@ const projectInclude = {
       beats: { orderBy: { createdAt: "asc" } },
       props: { orderBy: { createdAt: "asc" } },
       assetTasks: { orderBy: { createdAt: "asc" } },
+      characterProfiles: { orderBy: { createdAt: "asc" } },
+      sceneProductionNotes: { orderBy: { createdAt: "asc" } },
+      locationProfiles: { orderBy: { createdAt: "asc" } },
+      outline: true,
     },
   },
 } satisfies Prisma.ProjectInclude;
@@ -172,16 +176,64 @@ function mapWorkspace(project: ProjectWithWorkspace): WorkspaceView {
       description: beat.description,
       color: beat.color,
       durationMinutes: beat.durationMinutes,
+      sortOrder: beat.sortOrder,
     })),
     props: scriptRecord.props.map((prop) => ({
       id: prop.id,
       scriptId: prop.scriptId,
       name: prop.name,
+      themeColor: prop.themeColor,
       category: prop.category,
       description: prop.description,
       imageNote: prop.imageNote,
     })),
     assetTasks: scriptRecord.assetTasks.map(mapAssetTask),
+    characterProfiles: scriptRecord.characterProfiles.map((profile) => ({
+      id: profile.id,
+      scriptId: profile.scriptId,
+      characterId: profile.characterId,
+      displayName: profile.displayName,
+      color: profile.color,
+      gender: profile.gender,
+      age: profile.age,
+      role: profile.role,
+      bio: profile.bio,
+      appearanceNotes: profile.appearanceNotes,
+    })),
+    sceneProductionNotes: scriptRecord.sceneProductionNotes.map((note) => ({
+      id: note.id,
+      scriptId: note.scriptId,
+      sceneId: note.sceneId,
+      description: note.description,
+      artRequirements: note.artRequirements,
+      stillStatus: note.stillStatus,
+      videoStatus: note.videoStatus,
+    })),
+    locationProfiles: scriptRecord.locationProfiles.map((profile) => ({
+      id: profile.id,
+      scriptId: profile.scriptId,
+      locationId: profile.locationId,
+      displayName: profile.displayName,
+      address: profile.address,
+      description: profile.description,
+      scoutingStatus: profile.scoutingStatus,
+      ownerName: profile.ownerName,
+      phone: profile.phone,
+      email: profile.email,
+      dailyRental: profile.dailyRental,
+      deposit: profile.deposit,
+      currency: profile.currency,
+      availableFrom: profile.availableFrom,
+      availableUntil: profile.availableUntil,
+      shootingHours: profile.shootingHours,
+      notes: profile.notes,
+    })),
+    outline: scriptRecord.outline
+      ? {
+          scriptId: scriptRecord.outline.scriptId,
+          text: scriptRecord.outline.text,
+        }
+      : undefined,
     collaboration: {
       shareToken: project.share?.token,
       shareUrl: project.share ? `/share/${project.share.token}` : undefined,
@@ -615,6 +667,7 @@ export async function createBeatSnapshot({
       description: "A persisted outline beat created from the Beats page.",
       color: "racing-green",
       durationMinutes: 8,
+      sortOrder: sequence,
     },
   });
 
@@ -639,6 +692,7 @@ export async function createPropSnapshot({
       id: `prop-${randomUUID()}`,
       scriptId,
       name,
+      themeColor: "racing-green",
       category: "Continuity",
       description: "A persisted prop record created from the Props page.",
       imageNote: "Neutral table reference, labeled for continuity.",
@@ -831,6 +885,220 @@ export async function updateAssetSnapshot({
     message: updated.count
       ? `${nextTitle} saved in the persisted asset library.`
       : "Asset reference was already removed.",
+  };
+}
+
+export async function upsertCharacterProfileSnapshot({
+  projectId,
+  scriptId,
+  characterId,
+  displayName,
+  color,
+  gender,
+  age,
+  role,
+  bio,
+  appearanceNotes,
+}: {
+  projectId: string;
+  scriptId: string;
+  characterId: string;
+  displayName: string;
+  color: string;
+  gender: string;
+  age: string;
+  role: string;
+  bio: string;
+  appearanceNotes: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextName = displayName.trim();
+
+  if (!nextName) {
+    throw new Error("Character name cannot be empty.");
+  }
+
+  await prisma.characterProfile.upsert({
+    where: { scriptId_characterId: { scriptId, characterId } },
+    update: {
+      displayName: nextName,
+      color,
+      gender,
+      age,
+      role,
+      bio,
+      appearanceNotes,
+    },
+    create: {
+      id: `character-profile-${randomUUID()}`,
+      scriptId,
+      characterId,
+      displayName: nextName,
+      color,
+      gender,
+      age,
+      role,
+      bio,
+      appearanceNotes,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: `${nextName} profile saved.`,
+  };
+}
+
+export async function upsertSceneProductionNoteSnapshot({
+  projectId,
+  scriptId,
+  sceneId,
+  description,
+  artRequirements,
+  stillStatus,
+  videoStatus,
+}: {
+  projectId: string;
+  scriptId: string;
+  sceneId: string;
+  description: string;
+  artRequirements: string;
+  stillStatus: string;
+  videoStatus: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  await prisma.sceneProductionNote.upsert({
+    where: { scriptId_sceneId: { scriptId, sceneId } },
+    update: {
+      description,
+      artRequirements,
+      stillStatus,
+      videoStatus,
+    },
+    create: {
+      id: `scene-note-${randomUUID()}`,
+      scriptId,
+      sceneId,
+      description,
+      artRequirements,
+      stillStatus,
+      videoStatus,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: "Scene production notes saved.",
+  };
+}
+
+export async function upsertLocationProfileSnapshot({
+  projectId,
+  scriptId,
+  locationId,
+  displayName,
+  address,
+  description,
+  scoutingStatus,
+  ownerName,
+  phone,
+  email,
+  dailyRental,
+  deposit,
+  currency,
+  availableFrom,
+  availableUntil,
+  shootingHours,
+  notes,
+}: {
+  projectId: string;
+  scriptId: string;
+  locationId: string;
+  displayName: string;
+  address: string;
+  description: string;
+  scoutingStatus: string;
+  ownerName: string;
+  phone: string;
+  email: string;
+  dailyRental: string;
+  deposit: string;
+  currency: string;
+  availableFrom: string;
+  availableUntil: string;
+  shootingHours: string;
+  notes: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextName = displayName.trim();
+
+  if (!nextName) {
+    throw new Error("Location name cannot be empty.");
+  }
+
+  await prisma.locationProfile.upsert({
+    where: { scriptId_locationId: { scriptId, locationId } },
+    update: {
+      displayName: nextName,
+      address,
+      description,
+      scoutingStatus,
+      ownerName,
+      phone,
+      email,
+      dailyRental,
+      deposit,
+      currency,
+      availableFrom,
+      availableUntil,
+      shootingHours,
+      notes,
+    },
+    create: {
+      id: `location-profile-${randomUUID()}`,
+      scriptId,
+      locationId,
+      displayName: nextName,
+      address,
+      description,
+      scoutingStatus,
+      ownerName,
+      phone,
+      email,
+      dailyRental,
+      deposit,
+      currency,
+      availableFrom,
+      availableUntil,
+      shootingHours,
+      notes,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: `${nextName} location profile saved.`,
+  };
+}
+
+export async function updateScriptOutlineSnapshot({
+  projectId,
+  scriptId,
+  text,
+}: {
+  projectId: string;
+  scriptId: string;
+  text: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  await prisma.scriptOutline.upsert({
+    where: { scriptId },
+    update: { text },
+    create: {
+      scriptId,
+      text,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: "Script outline saved.",
   };
 }
 

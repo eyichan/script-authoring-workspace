@@ -72,10 +72,13 @@ M5 complete. Functional script workspace is implemented and verified.
 - Added page-specific tab surfaces for Character Relationships/Casting, Prop List, Location Relationships/Scout Sheet, Scene List, and Assets Generate/Tasks.
 - Added stable accessible labels to workspace navigation buttons for browser verification and keyboard/screen-reader targeting.
 - Added E2E coverage that switches through the page-specific workbench tabs and Script Cover.
+- Added Prisma metadata tables for Character profiles, Scene production notes, Location profiles, and Script outline text.
+- Expanded persisted Beat and Prop records with fields needed by reference-aligned detail editing.
+- Added WorkspaceView mapping and server actions for saving Character, Scene, Location, and Outline metadata.
 
 ## In Progress
 
-- Laper reference-aligned workspace detail expansion is active. Navigation/selection and page-specific tab surface slices are complete.
+- Laper reference-aligned workspace detail expansion is active. Navigation/selection, page-specific tab surfaces, and metadata persistence foundation slices are complete.
 
 ## Next
 
@@ -137,6 +140,13 @@ M5 complete. Functional script workspace is implemented and verified.
   - `npm run lint`: succeeded.
   - `npm run test:e2e`: succeeded, 8 tests passed.
   - One intermediate `npm run build` failed while fetching Google-hosted Montserrat font files from `fonts.gstatic.com`; retry succeeded without code changes.
+- After adding entity metadata persistence foundation:
+  - `npx prisma validate` with `DATABASE_URL` loaded from `.env.local`: succeeded.
+  - `npx prisma generate` with `DATABASE_URL` loaded from `.env.local`: succeeded.
+  - `npx prisma migrate deploy` with `DATABASE_URL` loaded from `.env.local`: succeeded and applied `20260516090000_entity_metadata`.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run build`: succeeded.
 - After adding Prisma/Postgres persistence foundation:
   - `docker compose up -d postgres`: succeeded; `script-authoring-postgres` is healthy.
   - `npx prisma migrate dev --name init` failed with `localhost:54329` (`P1001`) but succeeded after switching the connection string to `127.0.0.1:54329`.

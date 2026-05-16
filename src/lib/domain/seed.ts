@@ -80,6 +80,7 @@ export const seedWorkspace: WorkspaceView = {
       description: "The crew realizes sunrise will expose the Moon Base dome.",
       color: "racing-green",
       durationMinutes: 10,
+      sortOrder: 1,
     },
   ],
   props: [
@@ -87,12 +88,20 @@ export const seedWorkspace: WorkspaceView = {
       id: "prop-1",
       scriptId: "script-demo",
       name: "Cracked Observation Glass",
+      themeColor: "racing-green",
       category: "Set Dressing",
       description: "A damaged transparent dome panel above the command deck.",
       imageNote: "Cold blue rim light, hairline fractures, moon dust.",
     },
   ],
   assetTasks: [],
+  characterProfiles: [],
+  sceneProductionNotes: [],
+  locationProfiles: [],
+  outline: {
+    scriptId: "script-demo",
+    text: "",
+  },
   collaboration: {
     collaborators: [
       {

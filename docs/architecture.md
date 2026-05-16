@@ -96,14 +96,14 @@ Current persistence behavior:
 
 - `docker-compose.yml` runs local Postgres 17 on host port `54329`.
 - `.env.example` uses `127.0.0.1` instead of `localhost` because Prisma could not reach the Docker-published port through `localhost` on this host.
-- `prisma/schema.prisma` defines durable tables for projects, scripts, script blocks, beats, props, and asset generation tasks.
+- `prisma/schema.prisma` defines durable tables for projects, scripts, script blocks, beats, props, asset generation tasks, and workbench entity metadata.
 - `prisma.config.ts` keeps the database URL in Prisma config, following Prisma 7 conventions.
 - `src/lib/db/prisma.ts` initializes Prisma through `PrismaPg` and keeps a development singleton.
 - `prisma/seed.ts` upserts the deterministic local seed workspace into Postgres without deleting existing records.
 - `src/lib/db/workspace.ts` maps Prisma records into the domain `WorkspaceView` shape and derives scenes, characters, and locations from persisted script blocks.
 - `src/app/actions/projects.ts` persists project create, open, trash, and restore flows through server actions.
 - `src/app/actions/script-blocks.ts` persists script block insert, text update, duplicate, delete, and resequencing flows through server actions.
-- `src/app/actions/workbench.ts` persists manual Beats, Props, and Assets creation/import flows through server actions.
+- `src/app/actions/workbench.ts` persists manual Beats, Props, Assets, Character profile metadata, Scene production notes, Location scout metadata, and Script outline text through server actions.
 - `src/app/actions/collaboration.ts` persists invite link creation and collaborator records through server actions.
 
 ### UI
@@ -295,6 +295,16 @@ Beat title / Prop title / Asset title blur or Enter
   -> Prisma updateMany constrained to the current script
   -> return WorkspaceSnapshot plus status message
   -> client refreshes workbench records, sidebar counts, and inspector statistics
+```
+
+Implemented persisted entity metadata flow:
+
+```text
+Character / Scene / Location / Outline detail save
+  -> server action with projectId, scriptId, derived entity id, and metadata payload
+  -> Prisma upsert constrained by scriptId plus derived entity id
+  -> return WorkspaceSnapshot plus status message
+  -> client can merge persisted metadata with script-derived entity cards and dialogs
 ```
 
 Implemented persisted collaboration flow:

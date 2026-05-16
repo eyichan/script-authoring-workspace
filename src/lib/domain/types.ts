@@ -83,15 +83,65 @@ export type Beat = {
   description: string;
   color: string;
   durationMinutes: number;
+  sortOrder: number;
 };
 
 export type Prop = {
   id: string;
   scriptId: string;
   name: string;
+  themeColor: string;
   category: string;
   description: string;
   imageNote: string;
+};
+
+export type CharacterProfile = {
+  id: string;
+  scriptId: string;
+  characterId: string;
+  displayName: string;
+  color: string;
+  gender: string;
+  age: string;
+  role: string;
+  bio: string;
+  appearanceNotes: string;
+};
+
+export type SceneProductionNote = {
+  id: string;
+  scriptId: string;
+  sceneId: string;
+  description: string;
+  artRequirements: string;
+  stillStatus: string;
+  videoStatus: string;
+};
+
+export type LocationProfile = {
+  id: string;
+  scriptId: string;
+  locationId: string;
+  displayName: string;
+  address: string;
+  description: string;
+  scoutingStatus: string;
+  ownerName: string;
+  phone: string;
+  email: string;
+  dailyRental: string;
+  deposit: string;
+  currency: string;
+  availableFrom: string;
+  availableUntil: string;
+  shootingHours: string;
+  notes: string;
+};
+
+export type ScriptOutline = {
+  scriptId: string;
+  text: string;
 };
 
 export type AssetTaskKind =
@@ -138,5 +188,9 @@ export type WorkspaceView = {
   beats: Beat[];
   props: Prop[];
   assetTasks: AssetTask[];
+  characterProfiles: CharacterProfile[];
+  sceneProductionNotes: SceneProductionNote[];
+  locationProfiles: LocationProfile[];
+  outline?: ScriptOutline;
   collaboration: CollaborationState;
 };

@@ -95,6 +95,7 @@ async function main() {
         description: beat.description,
         color: beat.color,
         durationMinutes: beat.durationMinutes,
+        sortOrder: beat.sortOrder,
       },
       create: {
         id: beat.id,
@@ -103,6 +104,7 @@ async function main() {
         description: beat.description,
         color: beat.color,
         durationMinutes: beat.durationMinutes,
+        sortOrder: beat.sortOrder,
       },
     });
   }
@@ -112,6 +114,7 @@ async function main() {
       where: { id: prop.id },
       update: {
         name: prop.name,
+        themeColor: prop.themeColor,
         category: prop.category,
         description: prop.description,
         imageNote: prop.imageNote,
@@ -120,9 +123,21 @@ async function main() {
         id: prop.id,
         scriptId: prop.scriptId,
         name: prop.name,
+        themeColor: prop.themeColor,
         category: prop.category,
         description: prop.description,
         imageNote: prop.imageNote,
+      },
+    });
+  }
+
+  if (workspace.outline) {
+    await prisma.scriptOutline.upsert({
+      where: { scriptId: workspace.outline.scriptId },
+      update: { text: workspace.outline.text },
+      create: {
+        scriptId: workspace.outline.scriptId,
+        text: workspace.outline.text,
       },
     });
   }
