@@ -163,6 +163,8 @@ Current UI behavior:
 - Locations expose Overview, Relationships, and Scout Sheet tabs from derived location and scene data.
 - Scenes expose Cards and Scene List tabs from derived scene data.
 - Assets is a generated/imported task page; `Import` creates local `AssetTask` records and Assets expose Generate and Tasks tabs.
+- `src/components/workspace/entity-detail-dialog.tsx` owns the shared detail editor overlay for Beat, Character, Scene, Location, and Prop metadata.
+- Entity detail saves update production metadata only; script-derived heading and character cue source text remains owned by Script blocks.
 - Storyboard remains a locked module and reuses the unavailable-module visual pattern.
 - Home opens a local Recents project library with Active and Trash sections.
 - Projects support local create, open, delete-to-trash, restore, and right-click project actions.

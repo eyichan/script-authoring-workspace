@@ -888,6 +888,91 @@ export async function updateAssetSnapshot({
   };
 }
 
+export async function updateBeatDetailSnapshot({
+  projectId,
+  scriptId,
+  beatId,
+  title,
+  description,
+  color,
+  durationMinutes,
+}: {
+  projectId: string;
+  scriptId: string;
+  beatId: string;
+  title: string;
+  description: string;
+  color: string;
+  durationMinutes: number;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextTitle = title.trim();
+
+  if (!nextTitle) {
+    throw new Error("Beat title cannot be empty.");
+  }
+
+  const updated = await prisma.beat.updateMany({
+    where: { id: beatId, scriptId },
+    data: {
+      title: nextTitle,
+      description,
+      color,
+      durationMinutes: Math.max(1, Math.round(durationMinutes)),
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: updated.count
+      ? `${nextTitle} beat details saved.`
+      : "Beat was already removed.",
+  };
+}
+
+export async function updatePropDetailSnapshot({
+  projectId,
+  scriptId,
+  propId,
+  name,
+  themeColor,
+  category,
+  description,
+  imageNote,
+}: {
+  projectId: string;
+  scriptId: string;
+  propId: string;
+  name: string;
+  themeColor: string;
+  category: string;
+  description: string;
+  imageNote: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextName = name.trim();
+
+  if (!nextName) {
+    throw new Error("Prop name cannot be empty.");
+  }
+
+  const updated = await prisma.prop.updateMany({
+    where: { id: propId, scriptId },
+    data: {
+      name: nextName,
+      themeColor,
+      category,
+      description,
+      imageNote,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: updated.count
+      ? `${nextName} prop details saved.`
+      : "Prop was already removed.",
+  };
+}
+
 export async function upsertCharacterProfileSnapshot({
   projectId,
   scriptId,

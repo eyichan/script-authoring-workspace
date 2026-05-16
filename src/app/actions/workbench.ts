@@ -10,7 +10,9 @@ import {
   deletePropSnapshot,
   importAssetSnapshot,
   updateAssetSnapshot,
+  updateBeatDetailSnapshot,
   updateBeatSnapshot,
+  updatePropDetailSnapshot,
   updatePropSnapshot,
   updateScriptOutlineSnapshot,
   upsertCharacterProfileSnapshot,
@@ -104,6 +106,35 @@ export async function updateAssetAction(input: {
   title: string;
 }) {
   const snapshot = await updateAssetSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function updateBeatDetailAction(input: {
+  projectId: string;
+  scriptId: string;
+  beatId: string;
+  title: string;
+  description: string;
+  color: string;
+  durationMinutes: number;
+}) {
+  const snapshot = await updateBeatDetailSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function updatePropDetailAction(input: {
+  projectId: string;
+  scriptId: string;
+  propId: string;
+  name: string;
+  themeColor: string;
+  category: string;
+  description: string;
+  imageNote: string;
+}) {
+  const snapshot = await updatePropDetailSnapshot(input);
   revalidatePath("/");
   return snapshot;
 }

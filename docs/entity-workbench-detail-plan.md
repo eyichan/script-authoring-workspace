@@ -32,12 +32,13 @@ Implemented:
 - Prisma persistence now includes `CharacterProfile`, `SceneProductionNote`, `LocationProfile`, and `ScriptOutline`.
 - `Beat` and `Prop` include the additional fields needed by the reference-aligned edit surfaces.
 - Server actions exist for upserting Character, Scene, Location, and Outline metadata.
+- Detail editor dialogs are wired for Beat, Character, Scene, Location, and Prop metadata.
+- E2E coverage verifies those detail fields persist to Postgres.
 
 Missing:
 
-- Workbench detail dialogs for Characters, Scenes, Locations, and Props.
-- UI wiring from detail dialogs into the new metadata persistence actions.
-- Full Beat inline description, color, duration, and Outline persistence.
+- Guarded destructive metadata deletion.
+- Richer card previews that merge every metadata field into each overview card.
 - Script Cover editable fields.
 - Collaboration remains reachable, but the current work does not add new collaboration tab behavior.
 - Guarded delete semantics for entity metadata.
@@ -353,7 +354,7 @@ Verification:
 - E2E: create/edit profile, refresh, verify card fields persist.
 - E2E: script-derived character still appears without a profile.
 
-Status: persistence foundation complete. Detail dialog UI and E2E persistence coverage remain.
+Status: profile persistence, detail dialog UI, and E2E persistence coverage complete.
 
 ### Slice 4: Location Scout Metadata
 
@@ -365,7 +366,7 @@ Verification:
 
 - E2E: edit scouting status/contact/cost fields, refresh, verify.
 
-Status: persistence foundation complete. Detail dialog UI and E2E persistence coverage remain.
+Status: profile persistence, detail dialog UI, and E2E persistence coverage complete.
 
 ### Slice 5: Prop Detail Dialog Alignment
 

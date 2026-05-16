@@ -31,8 +31,14 @@ import {
   deletePropAction,
   importAssetAction,
   updateAssetAction,
+  updateBeatDetailAction,
   updateBeatAction,
+  updatePropDetailAction,
   updatePropAction,
+  updateScriptOutlineAction,
+  upsertCharacterProfileAction,
+  upsertLocationProfileAction,
+  upsertSceneProductionNoteAction,
 } from "@/app/actions/workbench";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -42,6 +48,10 @@ import {
   type PaginationMode,
 } from "@/components/workspace/inspector-panel";
 import { ProjectLibrary } from "@/components/workspace/project-library";
+import {
+  EntityDetailDialog,
+  type EntityDetailTarget,
+} from "@/components/workspace/entity-detail-dialog";
 import {
   ScriptEditorCanvas,
   type BlockInputElement,
@@ -267,6 +277,18 @@ export function ScriptForgeDemo({
   const [assetTasks, setAssetTasks] = useState<AssetTask[]>(
     initialWorkspace.assetTasks,
   );
+  const [characterProfiles, setCharacterProfiles] = useState(
+    initialWorkspace.characterProfiles,
+  );
+  const [sceneProductionNotes, setSceneProductionNotes] = useState(
+    initialWorkspace.sceneProductionNotes,
+  );
+  const [locationProfiles, setLocationProfiles] = useState(
+    initialWorkspace.locationProfiles,
+  );
+  const [scriptOutline, setScriptOutline] = useState(
+    initialWorkspace.outline?.text ?? "",
+  );
   const [collaboration, setCollaboration] = useState<CollaborationState>(
     initialWorkspace.collaboration,
   );
@@ -295,6 +317,7 @@ export function ScriptForgeDemo({
   );
   const [beatTab, setBeatTab] = useState("Arrangement");
   const [workbenchTabs, setWorkbenchTabs] = useState(initialWorkbenchTabs);
+  const [detailTarget, setDetailTarget] = useState<EntityDetailTarget | null>(null);
   const [mockAdditions, setMockAdditions] = useState(initialAdditions);
   const [workbenchMessage, setWorkbenchMessage] = useState(
     "Select a page action to create a local mock state.",
@@ -328,6 +351,10 @@ export function ScriptForgeDemo({
     setBeats(workspace.beats);
     setProps(workspace.props);
     setAssetTasks(workspace.assetTasks);
+    setCharacterProfiles(workspace.characterProfiles);
+    setSceneProductionNotes(workspace.sceneProductionNotes);
+    setLocationProfiles(workspace.locationProfiles);
+    setScriptOutline(workspace.outline?.text ?? "");
     setCollaboration(workspace.collaboration);
     setActiveProjectId(workspace.project.id);
     setSceneDrafts({});
@@ -1074,7 +1101,18 @@ export function ScriptForgeDemo({
                 beats={beats}
                 message={workbenchMessage}
                 mutationPending={workbenchMutationPending}
+                outlineText={scriptOutline}
                 onDeleteBeat={handleDeleteBeat}
+                onEditBeat={(beatId) => setDetailTarget({ kind: "beat", id: beatId })}
+                onUpdateOutline={(text) => {
+                  void runWorkbenchMutation(() =>
+                    updateScriptOutlineAction({
+                      projectId: activeProject.id,
+                      scriptId: script.id,
+                      text,
+                    }),
+                  );
+                }}
                 onUpdateBeat={handleUpdateBeat}
               />
             ) : !editorMode ? (
@@ -1102,6 +1140,20 @@ export function ScriptForgeDemo({
                 onDeleteCard={(id) =>
                   handleDeleteWorkbenchCard(activePage as WorkbenchPageName, id)
                 }
+                onEditCard={(id) => {
+                  if (activePage === "Characters") {
+                    setDetailTarget({ kind: "character", id });
+                    return;
+                  }
+                  if (activePage === "Locations") {
+                    setDetailTarget({ kind: "location", id });
+                    return;
+                  }
+                  if (activePage === "Props") {
+                    setDetailTarget({ kind: "prop", id });
+                  }
+                }}
+                onEditScene={(id) => setDetailTarget({ kind: "scene", id })}
                 onUpdateCard={(id, title) =>
                   handleUpdateWorkbenchCard(
                     activePage as WorkbenchPageName,
@@ -1175,6 +1227,78 @@ export function ScriptForgeDemo({
         </div>
       </div>
       )}
+      <EntityDetailDialog
+        beats={beats}
+        characters={derived.characters}
+        characterProfiles={characterProfiles}
+        locationProfiles={locationProfiles}
+        locations={derived.locations}
+        mutationPending={workbenchMutationPending}
+        props={props}
+        sceneNotes={sceneProductionNotes}
+        scenes={derived.scenes}
+        target={detailTarget}
+        onClose={() => setDetailTarget(null)}
+        onSaveBeat={(input) => {
+          setDetailTarget(null);
+          void runWorkbenchMutation(() =>
+            updateBeatDetailAction({
+              projectId: activeProject.id,
+              scriptId: script.id,
+              beatId: input.id,
+              title: input.title,
+              description: input.description,
+              color: input.color,
+              durationMinutes: input.durationMinutes,
+            }),
+          );
+        }}
+        onSaveCharacter={(input) => {
+          setDetailTarget(null);
+          void runWorkbenchMutation(() =>
+            upsertCharacterProfileAction({
+              projectId: activeProject.id,
+              scriptId: script.id,
+              ...input,
+            }),
+          );
+        }}
+        onSaveLocation={(input) => {
+          setDetailTarget(null);
+          void runWorkbenchMutation(() =>
+            upsertLocationProfileAction({
+              projectId: activeProject.id,
+              scriptId: script.id,
+              ...input,
+            }),
+          );
+        }}
+        onSaveProp={(input) => {
+          setDetailTarget(null);
+          void runWorkbenchMutation(() =>
+            updatePropDetailAction({
+              projectId: activeProject.id,
+              scriptId: script.id,
+              propId: input.id,
+              name: input.name,
+              themeColor: input.themeColor,
+              category: input.category,
+              description: input.description,
+              imageNote: input.imageNote,
+            }),
+          );
+        }}
+        onSaveScene={(input) => {
+          setDetailTarget(null);
+          void runWorkbenchMutation(() =>
+            upsertSceneProductionNoteAction({
+              projectId: activeProject.id,
+              scriptId: script.id,
+              ...input,
+            }),
+          );
+        }}
+      />
     </div>
   );
 }

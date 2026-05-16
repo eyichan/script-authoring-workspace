@@ -165,14 +165,20 @@ export function BeatsPage({
   beats,
   message,
   mutationPending,
+  outlineText,
   onDeleteBeat,
+  onEditBeat,
+  onUpdateOutline,
   onUpdateBeat,
 }: {
   activeTab: string;
   beats: Beat[];
   message: string;
   mutationPending: boolean;
+  outlineText: string;
   onDeleteBeat: (beatId: string) => void;
+  onEditBeat: (beatId: string) => void;
+  onUpdateOutline: (text: string) => void;
   onUpdateBeat: (beatId: string, title: string) => void;
 }) {
   const selectedBeat = beats[0];
@@ -208,7 +214,7 @@ export function BeatsPage({
             {beats.map((beat, index) => (
               <div
                 key={beat.id}
-                className="grid grid-cols-[72px_minmax(0,1fr)_90px] items-center gap-3 rounded-xl border border-[#deded8] bg-white p-4 shadow-[0_8px_24px_rgb(42_42_37/0.06)]"
+                className="grid grid-cols-[72px_minmax(0,1fr)_176px] items-center gap-3 rounded-xl border border-[#deded8] bg-white p-4 shadow-[0_8px_24px_rgb(42_42_37/0.06)]"
               >
                 <span className="text-[13px] text-[#8b8b84]">#{index + 1}</span>
                 <div className="min-w-0">
@@ -217,7 +223,17 @@ export function BeatsPage({
                     {beat.description}
                   </p>
                 </div>
-                <Badge variant="secondary">{beat.durationMinutes} min</Badge>
+                <div className="flex items-center justify-end gap-2">
+                  <Badge variant="secondary">{beat.durationMinutes} min</Badge>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => onEditBeat(beat.id)}
+                    className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+                  >
+                    Edit beat
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -234,12 +250,11 @@ export function BeatsPage({
               outline model.
             </p>
           </div>
-          <textarea
-            aria-label="Script outline"
-            defaultValue={beats
-              .map((beat, index) => `${index + 1}. ${beat.title} - ${beat.description}`)
-              .join("\n")}
-            className="min-h-[460px] resize-none rounded-xl border border-[#deded8] bg-[#fcfdfc] p-5 text-[14px] leading-7 text-[#242421] outline-none focus:ring-2 focus:ring-[#dfe8e2]"
+          <OutlineEditor
+            beats={beats}
+            mutationPending={mutationPending}
+            outlineText={outlineText}
+            onUpdateOutline={onUpdateOutline}
           />
         </div>
       ) : (
@@ -316,6 +331,14 @@ export function BeatsPage({
               <div className="mt-4 rounded-lg border border-[#e4e7e4] bg-[#f8faf8] p-3 text-[13px] leading-5 text-[#6f7772]">
                 <strong className="block text-[#242421]">Description</strong>
                 {selectedBeat.description}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onEditBeat(selectedBeat.id)}
+                  className="mt-3 h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+                >
+                  Edit Beat
+                </Button>
               </div>
             ) : null}
             <div className="mt-4 rounded-lg border border-dashed border-[#cfd8d2] bg-[#f8faf8] p-3 text-[13px] leading-5 text-[#6f7772]">
@@ -324,6 +347,46 @@ export function BeatsPage({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function OutlineEditor({
+  beats,
+  mutationPending,
+  outlineText,
+  onUpdateOutline,
+}: {
+  beats: Beat[];
+  mutationPending: boolean;
+  outlineText: string;
+  onUpdateOutline: (text: string) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <textarea
+        aria-label="Script outline"
+        defaultValue={
+          outlineText ||
+          beats
+            .map((beat, index) => `${index + 1}. ${beat.title} - ${beat.description}`)
+            .join("\n")
+        }
+        className="min-h-[420px] resize-none rounded-xl border border-[#deded8] bg-[#fcfdfc] p-5 text-[14px] leading-7 text-[#242421] outline-none focus:ring-2 focus:ring-[#dfe8e2]"
+      />
+      <Button
+        type="button"
+        disabled={mutationPending}
+        onClick={(event) => {
+          const textarea = event.currentTarget
+            .closest("div")
+            ?.querySelector<HTMLTextAreaElement>("textarea");
+          onUpdateOutline(textarea?.value ?? "");
+        }}
+        className="h-8 w-fit rounded-full bg-[#2e6248] px-4 text-[13px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0"
+      >
+        {mutationPending ? "Saving" : "Save Outline"}
+      </Button>
     </div>
   );
 }
@@ -344,6 +407,8 @@ export function WorkbenchPage({
   scenes,
   mutationPending,
   onDeleteCard,
+  onEditCard,
+  onEditScene,
   onUpdateCard,
 }: {
   page: WorkbenchPageName;
@@ -361,6 +426,8 @@ export function WorkbenchPage({
   scenes: DerivedScene[];
   mutationPending: boolean;
   onDeleteCard: (id: string) => void;
+  onEditCard: (id: string) => void;
+  onEditScene: (id: string) => void;
   onUpdateCard: (id: string, title: string) => void;
 }) {
   const config = workbenchConfig[page];
@@ -389,6 +456,7 @@ export function WorkbenchPage({
             activeItemId={activeItemId}
             scenes={scenes}
             generatedStills={generatedStills}
+            onEditScene={onEditScene}
             onGenerateStill={onGenerateStill}
           />
         )
@@ -419,6 +487,7 @@ export function WorkbenchPage({
           mutationPending={mutationPending}
           page={page}
           onDeleteCard={onDeleteCard}
+          onEditCard={onEditCard}
           onUpdateCard={onUpdateCard}
         />
       ) : (
@@ -859,11 +928,13 @@ function SceneCards({
   activeItemId,
   scenes,
   generatedStills,
+  onEditScene,
   onGenerateStill,
 }: {
   activeItemId: string;
   scenes: DerivedScene[];
   generatedStills: string[];
+  onEditScene: (sceneId: string) => void;
   onGenerateStill: (sceneId: string) => void;
 }) {
   return (
@@ -906,7 +977,11 @@ function SceneCards({
             >
               {generatedStills.includes(scene.id) ? "Still Generated" : "Generate Still"}
             </Button>
-            <Button variant="secondary" className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0">
+            <Button
+              variant="secondary"
+              onClick={() => onEditScene(scene.id)}
+              className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+            >
               Edit
             </Button>
             <Button variant="secondary" className="h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium text-[#8a8f8b] shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0">
@@ -926,6 +1001,7 @@ function WorkbenchCardGrid({
   mutationPending,
   page,
   onDeleteCard,
+  onEditCard,
   onUpdateCard,
 }: {
   cards: WorkbenchCard[];
@@ -934,6 +1010,7 @@ function WorkbenchCardGrid({
   mutationPending: boolean;
   page: WorkbenchPageName;
   onDeleteCard: (id: string) => void;
+  onEditCard: (id: string) => void;
   onUpdateCard: (id: string, title: string) => void;
 }) {
   return (
@@ -992,6 +1069,16 @@ function WorkbenchCardGrid({
               ? "Linked to scene production and export history."
               : "Derived from screenplay structure and ready for production notes."}
           </p>
+          {page !== "Assets" ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => onEditCard(card.id)}
+              className="mt-4 h-8 rounded-full border border-[#dfe4e1]/60 bg-[#fcfdfc] px-3 text-[12px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.06),inset_0_1px_0_rgb(255_255_255/0.8)] hover:bg-[#f8faf9] active:translate-y-0"
+            >
+              Edit
+            </Button>
+          ) : null}
         </div>
       ))}
       <div className="rounded-xl border border-dashed border-[#cfd8d2] bg-[#f8faf8] p-4 text-[13px] leading-5 text-[#6f7772]">

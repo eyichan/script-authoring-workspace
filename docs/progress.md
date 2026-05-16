@@ -75,10 +75,13 @@ M5 complete. Functional script workspace is implemented and verified.
 - Added Prisma metadata tables for Character profiles, Scene production notes, Location profiles, and Script outline text.
 - Expanded persisted Beat and Prop records with fields needed by reference-aligned detail editing.
 - Added WorkspaceView mapping and server actions for saving Character, Scene, Location, and Outline metadata.
+- Added detail editor dialogs for Beat, Character, Scene, Location, and Prop metadata.
+- Added Outline save support from the Beats Outline tab.
+- Added E2E coverage proving workbench detail metadata persists to Postgres.
 
 ## In Progress
 
-- Laper reference-aligned workspace detail expansion is active. Navigation/selection, page-specific tab surfaces, and metadata persistence foundation slices are complete.
+- Laper reference-aligned workspace detail expansion is implemented through persisted detail editing. Guarded destructive metadata deletion remains a future hardening slice.
 
 ## Next
 
@@ -147,6 +150,11 @@ M5 complete. Functional script workspace is implemented and verified.
   - `npm test`: succeeded, 10 tests passed.
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
+- After adding persisted detail editor dialogs:
+  - `npx playwright test tests/e2e/workspace-persistence.spec.ts -g "entity detail"`: succeeded, 1 test passed.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run test:e2e`: succeeded, 9 tests passed.
 - After adding Prisma/Postgres persistence foundation:
   - `docker compose up -d postgres`: succeeded; `script-authoring-postgres` is healthy.
   - `npx prisma migrate dev --name init` failed with `localhost:54329` (`P1001`) but succeeded after switching the connection string to `127.0.0.1:54329`.

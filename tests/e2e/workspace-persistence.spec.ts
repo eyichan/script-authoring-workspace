@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 loadEnv({ path: ".env.local" });
@@ -34,6 +35,10 @@ async function latestActiveProject() {
           beats: true,
           props: true,
           assetTasks: true,
+          characterProfiles: true,
+          sceneProductionNotes: true,
+          locationProfiles: true,
+          outline: true,
         },
       },
       collaborators: { orderBy: { createdAt: "asc" } },
@@ -266,6 +271,117 @@ test("renders page-specific workbench tab surfaces", async ({ page }) => {
   await page.getByLabel("Script").click();
   await page.locator("main").getByRole("tab", { name: "Cover" }).click();
   await expect(page.locator("main")).toContainText("Written by");
+});
+
+test("persists workbench entity detail editor metadata", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  const project = await latestActiveProject();
+  const script = project.scripts[0];
+
+  if (!script) {
+    throw new Error("Expected a script for the new project.");
+  }
+
+  await prisma.scriptBlock.createMany({
+    data: [
+      {
+        id: `block-${randomUUID()}`,
+        scriptId: script.id,
+        type: "scene",
+        text: "INT. DETAIL BRIDGE - DAY",
+        position: 1,
+      },
+      {
+        id: `block-${randomUUID()}`,
+        scriptId: script.id,
+        type: "character",
+        text: "MARA DETAIL",
+        position: 2,
+      },
+    ],
+  });
+  await prisma.beat.create({
+    data: {
+      id: `beat-${randomUUID()}`,
+      scriptId: script.id,
+      title: "Seed Detail Beat",
+      description: "Seed beat detail.",
+      color: "racing-green",
+      durationMinutes: 8,
+      sortOrder: 1,
+    },
+  });
+  await prisma.prop.create({
+    data: {
+      id: `prop-${randomUUID()}`,
+      scriptId: script.id,
+      name: "Seed Detail Prop",
+      themeColor: "racing-green",
+      category: "Continuity",
+      description: "Seed prop detail.",
+      imageNote: "Seed image note.",
+    },
+  });
+
+  await page.reload();
+
+  await page.getByLabel("Beats").click();
+  await page.locator("main").getByRole("button", { name: "Beats" }).click();
+  await expect(page.locator("main")).toContainText("Beat editor");
+  await page.getByRole("button", { name: /Edit Beat/i }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Beat Name").fill("Detail Beat");
+  await dialog.getByLabel("Description").fill("Beat metadata survives refresh.");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.beats[0]?.title)
+    .toBe("Detail Beat");
+
+  await page.getByLabel("Characters").click();
+  await page.locator("main").getByRole("button", { name: "Edit" }).first().click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Role/Identity").fill("Navigator");
+  await dialog.getByLabel("Bio").fill("Character profile metadata.");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.characterProfiles[0]?.bio)
+    .toBe("Character profile metadata.");
+
+  await page.getByLabel("Scenes").click();
+  await page.locator("main").getByRole("button", { name: "Edit" }).first().click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Scene Description").fill("Scene production note.");
+  await dialog.getByLabel("Art Requirements").fill("Cold practical light.");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect
+    .poll(
+      async () => (await latestActiveProject()).scripts[0]?.sceneProductionNotes[0]?.description,
+    )
+    .toBe("Scene production note.");
+
+  await page.getByLabel("Locations").click();
+  await page.locator("main").getByRole("button", { name: "Edit" }).first().click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Address").fill("42 Detail Bridge Road");
+  await dialog.getByLabel("Owner / Site Manager").fill("Scout Lead");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.locationProfiles[0]?.address)
+    .toBe("42 Detail Bridge Road");
+
+  await page.getByLabel("Props").click();
+  await page.locator("main").getByRole("button", { name: "Edit" }).first().click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name").fill("Detail Prop");
+  await dialog.getByLabel("Category").fill("Hero");
+  await dialog.getByLabel("Image Note").fill("Chrome edge reference.");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.props[0]?.imageNote)
+    .toBe("Chrome edge reference.");
 });
 
 test("persists script blocks and workbench records across refresh", async ({ page }) => {
