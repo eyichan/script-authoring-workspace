@@ -30,6 +30,7 @@ Missing:
 
 - Workbench detail dialogs for Characters, Scenes, Locations, and Props.
 - Reference-aligned Beat `Arrangement`, `Beats`, and `Outline` views.
+- Reference-aligned tab contents for Character Relationships/Casting, Prop List, Location Relationships/Scout Sheet, Scene List, Assets Generate/Tasks, and Script Cover/Collaboration.
 - Metadata persistence for derived entity details.
 - Script context-menu `Open` routing to the corresponding workbench entity.
 - Selected workbench entity state and visible selected-card treatment.
@@ -100,6 +101,36 @@ Add persisted records keyed by script/project and stable derived ids:
   - `text`
 
 ## UI Plan
+
+### Tab Coverage
+
+Implement page-specific tab content:
+
+- Script:
+  - Script canvas.
+  - Cover fields.
+  - Writing Info and Collaboration inspector states.
+- Beats:
+  - Arrangement timeline.
+  - Inline Beat editor.
+  - Outline editor.
+- Characters:
+  - Overview cards.
+  - Relationships surface.
+  - Casting table.
+- Props:
+  - Overview cards.
+  - List table.
+- Locations:
+  - Overview cards.
+  - Relationships surface.
+  - Scout Sheet table.
+- Scenes:
+  - Cards board.
+  - Scene List table.
+- Assets:
+  - Generate template gallery.
+  - Tasks list/table.
 
 ### Shared Foundation
 
@@ -287,6 +318,20 @@ Verification:
 - E2E: create a beat, edit title/description inline, edit color in modal, refresh, verify.
 - E2E: switch Arrangement / Beats / Outline and verify each view renders.
 
+### Slice 2B: Workbench Tab Completion
+
+- Add Character Relationships and Casting table surfaces.
+- Add Prop List table.
+- Add Location Relationships and Scout Sheet table.
+- Add Scene List table alignment.
+- Add Assets Generate and Tasks surfaces.
+- Verify Script Cover and Collaboration remain reachable after workbench changes.
+
+Verification:
+
+- Browser: switch every workspace tab and verify a non-broken, page-specific surface renders.
+- E2E: at minimum assert Character Casting, Location Scout Sheet, Scene List, Prop List, Assets Tasks, and Script Cover render their expected headings or columns.
+
 ### Slice 3: Character Profile Metadata
 
 - Add `CharacterProfile` persistence.
@@ -332,6 +377,7 @@ Verification:
 
 - Workbench cards expose reference-aligned internal data and actions.
 - Beat page supports Arrangement, inline Beat editing, Outline, modal create/edit, and guarded delete.
+- Every visible workspace tab renders a page-specific surface rather than falling through to a generic placeholder.
 - Entity detail dialogs persist metadata across refresh.
 - Script-derived entity identity remains stable enough to retain metadata.
 - Right-click `Open` routes to the corresponding entity page where a corresponding entity exists.

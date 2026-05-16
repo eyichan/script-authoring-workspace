@@ -234,11 +234,12 @@ Tasks:
 
 1. Add workbench entity selection and script context-menu `Open` routing.
 2. Add reference-aligned Beat Arrangement, Beats, and Outline views.
-3. Add persisted metadata records for Character profiles, Scene production notes, and Location scout profiles.
-4. Expand Prop metadata editing to match the reference modal.
-5. Add Character, Scene, Location, Prop, and Beat detail dialogs.
-6. Keep script source text canonical; detail dialogs edit production metadata.
-7. Add delete confirmation for profile/manual entity deletion.
+3. Complete page-specific tab surfaces for Character Relationships/Casting, Prop List, Location Relationships/Scout Sheet, Scene List, Assets Generate/Tasks, and Script Cover/Collaboration.
+4. Add persisted metadata records for Character profiles, Scene production notes, and Location scout profiles.
+5. Expand Prop metadata editing to match the reference modal.
+6. Add Character, Scene, Location, Prop, and Beat detail dialogs.
+7. Keep script source text canonical; detail dialogs edit production metadata.
+8. Add delete confirmation for profile/manual entity deletion.
 
 Acceptance:
 
@@ -249,5 +250,6 @@ Acceptance:
 - Location detail saves scout/contact/cost/availability fields.
 - Prop detail saves category, description, and image note.
 - Beat page supports arrangement timeline, inline beat editing, outline editing, color metadata, and modal create/edit/delete.
+- Every visible workspace tab renders page-specific content and is covered by browser or E2E verification.
 - Source script blocks remain intact when profile metadata is edited or deleted.
 - Tests and browser verification pass.

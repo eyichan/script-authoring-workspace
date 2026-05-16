@@ -88,6 +88,49 @@ Locked or simulated modules:
 
 Verified on 2026-05-16 in the authenticated Laper browser session. The session displayed `Offline · editing locally`, so this section describes visible client behavior and UI contracts, not proven server persistence.
 
+## Workspace Tab Matrix
+
+Script:
+
+- `Script`: screenplay block canvas, toolbar, and Writing inspector
+- `Cover`: title, author, contact, and draft/date cover fields
+- Writing `Info`: pagination, format, statistics
+- Writing `Collaboration`: share link permissions and project members
+
+Beats:
+
+- `Arrangement`: timeline scale, `Tidy`, beat card, duration, and `Edit beat`
+- `Beats`: inline selected-beat title and description editor
+- `Outline`: project-level outline textarea
+
+Characters:
+
+- `Overview`: cards with generated placeholder, counts, bio preview, `Generate`, and `Edit`
+- `Relationships`: relationship surface with labels such as Force, Dialogue, and Chord
+- `Casting`: table with Display Name, Gender, Age, Role/Identity, Scenes, and Lines
+
+Props:
+
+- `Overview`: cards with category, description preview, `Generate`, and `Edit`
+- `List`: table with Name, Category, and Description
+
+Locations:
+
+- `Overview`: cards with generated placeholder, counts, description preview, `Generate`, and `Edit`
+- `Relationships`: relationship surface; no populated relationship data was visible in the observed one-location project
+- `Scout Sheet`: table with Name, Status, Address, Owner, Daily Rental, Availability, and Scenes
+
+Scenes:
+
+- `Cards`: Scene Board cards with still placeholder, counts, description preview, and generation/edit actions
+- `Scene List`: table with Scene, Scene Title, Characters, Count, and Lines
+
+Assets:
+
+- `Generate`: Creative Studio templates grouped by Visual, Video, and audio
+- `Tasks`: task/list surface; observed empty state was `No data`
+- `Display`: table/display control rather than a primary page tab
+
 ### Beats
 
 Beats page:
