@@ -144,7 +144,7 @@ const initialWorkbenchTabs: Record<WorkbenchPageName, string> = {
   Props: "Overview",
   Locations: "Overview",
   Scenes: "Cards",
-  Assets: "All",
+  Assets: "Generate",
 };
 
 const initialAdditions: Record<WorkbenchPageName, number> = {
@@ -293,6 +293,7 @@ export function ScriptForgeDemo({
   const [productionMessage, setProductionMessage] = useState(
     "Production actions are simulated locally.",
   );
+  const [beatTab, setBeatTab] = useState("Arrangement");
   const [workbenchTabs, setWorkbenchTabs] = useState(initialWorkbenchTabs);
   const [mockAdditions, setMockAdditions] = useState(initialAdditions);
   const [workbenchMessage, setWorkbenchMessage] = useState(
@@ -1033,6 +1034,7 @@ export function ScriptForgeDemo({
         >
           <WorkspaceMainHeader
             activePage={activePage}
+            beatTab={beatTab}
             editorMode={editorMode}
             editorTab={editorTab}
             pageActionCount={pageActionCount}
@@ -1044,6 +1046,7 @@ export function ScriptForgeDemo({
               isWorkbenchPage(activePage) ? workbenchTabs[activePage] : ""
             }
             onCreateBeat={handleCreateBeat}
+            onSetBeatTab={setBeatTab}
             onSetEditorTab={setEditorTab}
             onSetWorkbenchTab={(tab) => {
               if (!isWorkbenchPage(activePage)) return;
@@ -1067,6 +1070,7 @@ export function ScriptForgeDemo({
               <LockedStoryboard />
             ) : activePage === "Beats" ? (
               <BeatsPage
+                activeTab={beatTab}
                 beats={beats}
                 message={workbenchMessage}
                 mutationPending={workbenchMutationPending}
@@ -1088,7 +1092,11 @@ export function ScriptForgeDemo({
                       : [...current, sceneId],
                   )
                 }
+                assetTasks={assetTasks}
                 cards={dynamicCards[activePage]}
+                characters={derived.characters}
+                locations={derived.locations}
+                props={props}
                 scenes={derived.scenes}
                 mutationPending={workbenchMutationPending}
                 onDeleteCard={(id) =>

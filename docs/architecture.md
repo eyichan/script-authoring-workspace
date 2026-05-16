@@ -156,9 +156,13 @@ Current UI behavior:
 - Duplicate and Delete mutate the source block list, then derived Scenes, Characters, and Locations recalculate from the remaining ordered blocks.
 - Workbench pages receive derived cards instead of static mock cards.
 - Workbench pages receive the active derived item id from the shell and render selected row/card highlighting so cross-page navigation can reveal the target entity.
-- Beats is a manual outline page with local `Beat` creation, sidebar sync, and card/list rendering.
+- Beats is a manual outline page with local `Beat` creation, sidebar sync, and Arrangement, Beats, and Outline tabs.
+- Characters expose Overview, Relationships, and Casting tabs from derived character and scene data.
 - Props is a manual production-memory page; `New Prop` creates local `Prop` records instead of mock counters.
-- Assets is a generated/imported task page; `Import` creates local `AssetTask` records and supports still/video tab filtering by title.
+- Props expose Overview and List tabs from persisted prop records.
+- Locations expose Overview, Relationships, and Scout Sheet tabs from derived location and scene data.
+- Scenes expose Cards and Scene List tabs from derived scene data.
+- Assets is a generated/imported task page; `Import` creates local `AssetTask` records and Assets expose Generate and Tasks tabs.
 - Storyboard remains a locked module and reuses the unavailable-module visual pattern.
 - Home opens a local Recents project library with Active and Trash sections.
 - Projects support local create, open, delete-to-trash, restore, and right-click project actions.

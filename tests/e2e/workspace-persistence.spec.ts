@@ -230,6 +230,44 @@ test("opens script blocks in matching workbench destinations", async ({ page }) 
   await expect(page.locator("main .ring-2")).toHaveCount(1);
 });
 
+test("renders page-specific workbench tab surfaces", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  await page.getByLabel("Beats").click();
+  await expect(page.locator("main")).toContainText("Arrangement");
+  await page.locator("main").getByRole("button", { name: "Beats" }).click();
+  await expect(page.locator("main")).toContainText("Beat editor");
+  await page.locator("main").getByRole("button", { name: "Outline" }).click();
+  await expect(page.getByLabel("Script outline")).toBeVisible();
+
+  await page.getByLabel("Characters").click();
+  await page.locator("main").getByRole("button", { name: "Casting" }).click();
+  await expect(page.locator("main")).toContainText("Casting Status");
+
+  await page.getByLabel("Locations").click();
+  await page.locator("main").getByRole("button", { name: "Scout Sheet" }).click();
+  await expect(page.locator("main")).toContainText("Daily Rental");
+
+  await page.getByLabel("Props").click();
+  await page.locator("main").getByRole("button", { name: "List" }).click();
+  await expect(page.locator("main")).toContainText("Image Note");
+
+  await page.getByLabel("Scenes").click();
+  await page.locator("main").getByRole("button", { name: "Scene List" }).click();
+  await expect(page.locator("main")).toContainText("Scene Title");
+
+  await page.getByLabel("Assets").click();
+  await expect(page.locator("main")).toContainText("Creative Studio");
+  await page.locator("main").getByRole("button", { name: "Tasks" }).click();
+  await expect(page.locator("main")).toContainText("Task Status");
+
+  await page.getByLabel("Script").click();
+  await page.locator("main").getByRole("tab", { name: "Cover" }).click();
+  await expect(page.locator("main")).toContainText("Written by");
+});
+
 test("persists script blocks and workbench records across refresh", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Home").click();
@@ -303,6 +341,7 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   expect(script.assetTasks[0]?.status).toBe("done");
 
   await page.getByRole("button", { name: "Beats" }).click({ force: true });
+  await page.locator("main").getByRole("button", { name: "Beats" }).click();
   await page.getByLabel("Beat title 1").fill("Revised Beat");
   await page.getByLabel("Beat title 1").press("Enter");
   await expect
@@ -329,6 +368,7 @@ test("persists script blocks and workbench records across refresh", async ({ pag
     .toBe(0);
 
   await page.getByRole("button", { name: "Assets" }).click({ force: true });
+  await page.locator("main").getByRole("button", { name: "Tasks" }).click();
   await page.getByLabel("Asset title Imported still reference 1").fill("Revised Still");
   await page.getByLabel("Asset title Imported still reference 1").press("Enter");
   await expect

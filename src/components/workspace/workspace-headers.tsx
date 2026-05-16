@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   WorkbenchTabs,
+  beatTabs,
   workbenchConfig,
   type WorkbenchPageName,
 } from "@/components/workspace/workbench-pages";
@@ -49,6 +50,7 @@ type WorkspaceTopBarProps = {
 
 type WorkspaceMainHeaderProps = {
   activePage: HeaderPageName;
+  beatTab: string;
   editorMode: boolean;
   editorTab: EditorTab;
   pageActionCount: number;
@@ -56,6 +58,7 @@ type WorkspaceMainHeaderProps = {
   workbenchMutationPending: boolean;
   workbenchTab: string;
   onCreateBeat: () => void;
+  onSetBeatTab: (tab: string) => void;
   onSetEditorTab: (tab: EditorTab) => void;
   onSetWorkbenchTab: (tab: string) => void;
   onWorkbenchAction: () => void;
@@ -87,6 +90,7 @@ export function WorkspaceTopBar({
 
 export function WorkspaceMainHeader({
   activePage,
+  beatTab,
   editorMode,
   editorTab,
   pageActionCount,
@@ -94,6 +98,7 @@ export function WorkspaceMainHeader({
   workbenchMutationPending,
   workbenchTab,
   onCreateBeat,
+  onSetBeatTab,
   onSetEditorTab,
   onSetWorkbenchTab,
   onWorkbenchAction,
@@ -136,9 +141,11 @@ export function WorkspaceMainHeader({
           </TabsList>
         </Tabs>
       ) : activePage === "Beats" ? (
-        <Badge variant="secondary" className="justify-self-center">
-          Outline
-        </Badge>
+        <WorkbenchTabs
+          tabs={beatTabs}
+          activeTab={beatTab}
+          onChange={onSetBeatTab}
+        />
       ) : activePage === "Storyboard" ? (
         <Badge variant="secondary" className="justify-self-center">
           Master feature

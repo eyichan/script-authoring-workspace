@@ -127,6 +127,7 @@ export function WorkspaceSidebar({
           <button
             key={item.label}
             type="button"
+            aria-label={item.label}
             onClick={() => onSelectPage(item.label)}
             className={cn(
               "inline-flex h-[30px] w-[214px] shrink-0 items-center justify-start gap-3 rounded-lg px-2.5 text-[13px] font-normal text-[#171a19] transition-[background-color,color] duration-300 hover:bg-[#e4e8e6] max-[1180px]:w-11 max-[1180px]:justify-center max-[1180px]:px-0",

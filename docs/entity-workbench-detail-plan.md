@@ -25,15 +25,18 @@ Implemented:
 - Props, Beats, and Assets have persisted manual records.
 - Workbench pages render cards/lists from derived or persisted data.
 - Scene format selectors and Transition selector now exist in the script canvas.
+- Script context-menu `Open` routes scene blocks to Scenes and character/dialogue/parenthetical context to Characters.
+- Selected workbench entities are highlighted after Script `Open` and sidebar selection.
+- Beats now exposes Arrangement, Beats, and Outline tab surfaces.
+- Characters, Props, Locations, Scenes, and Assets expose page-specific tab surfaces instead of generic placeholders.
 
 Missing:
 
 - Workbench detail dialogs for Characters, Scenes, Locations, and Props.
-- Reference-aligned Beat `Arrangement`, `Beats`, and `Outline` views.
-- Reference-aligned tab contents for Character Relationships/Casting, Prop List, Location Relationships/Scout Sheet, Scene List, Assets Generate/Tasks, and Script Cover/Collaboration.
 - Metadata persistence for derived entity details.
-- Script context-menu `Open` routing to the corresponding workbench entity.
-- Selected workbench entity state and visible selected-card treatment.
+- Full Beat inline description, color, duration, and Outline persistence.
+- Script Cover editable fields.
+- Collaboration remains reachable, but the current work does not add new collaboration tab behavior.
 - Guarded delete semantics for entity metadata.
 
 ## Product Rules
@@ -295,6 +298,8 @@ Verification:
 - Browser: right-click Scene `Open` opens Scenes and highlights the scene.
 - Browser: right-click Character `Open` opens Characters and highlights the character.
 
+Status: complete in `dd11c9a`.
+
 ### Slice 2: Scene Detail Metadata
 
 - Add `SceneProductionNote` persistence.
@@ -331,6 +336,8 @@ Verification:
 
 - Browser: switch every workspace tab and verify a non-broken, page-specific surface renders.
 - E2E: at minimum assert Character Casting, Location Scout Sheet, Scene List, Prop List, Assets Tasks, and Script Cover render their expected headings or columns.
+
+Status: complete. Current implementation adds visible page-specific surfaces and E2E coverage; detail editing and metadata persistence remain in later slices.
 
 ### Slice 3: Character Profile Metadata
 

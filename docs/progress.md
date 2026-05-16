@@ -68,10 +68,14 @@ M5 complete. Functional script workspace is implemented and verified.
 - Routed Script block `Open` actions to their matching workbench destinations: scene blocks open the Scenes workbench, while character, dialogue, and parenthetical blocks open the linked Character card.
 - Added selected row/card highlighting in the workbench so sidebar selection and Script `Open` navigation reveal the active derived entity.
 - Added E2E coverage for Script context-menu `Open` navigation into Scenes and Characters.
+- Added reference-aligned Beats tabs for Arrangement, Beats, and Outline.
+- Added page-specific tab surfaces for Character Relationships/Casting, Prop List, Location Relationships/Scout Sheet, Scene List, and Assets Generate/Tasks.
+- Added stable accessible labels to workspace navigation buttons for browser verification and keyboard/screen-reader targeting.
+- Added E2E coverage that switches through the page-specific workbench tabs and Script Cover.
 
 ## In Progress
 
-- Laper reference-aligned workspace detail expansion is active. The first slice, Script `Open` navigation into existing workbench pages, is complete.
+- Laper reference-aligned workspace detail expansion is active. Navigation/selection and page-specific tab surface slices are complete.
 
 ## Next
 
@@ -127,6 +131,12 @@ M5 complete. Functional script workspace is implemented and verified.
   - `npm run lint`: succeeded.
   - `npm run build`: succeeded.
   - `npm run test:e2e`: succeeded, 7 tests passed.
+- After adding page-specific workbench tab surfaces:
+  - `npx playwright test tests/e2e/workspace-persistence.spec.ts -g "renders page-specific"`: succeeded, 1 test passed.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm run test:e2e`: succeeded, 8 tests passed.
+  - One intermediate `npm run build` failed while fetching Google-hosted Montserrat font files from `fonts.gstatic.com`; retry succeeded without code changes.
 - After adding Prisma/Postgres persistence foundation:
   - `docker compose up -d postgres`: succeeded; `script-authoring-postgres` is healthy.
   - `npx prisma migrate dev --name init` failed with `localhost:54329` (`P1001`) but succeeded after switching the connection string to `127.0.0.1:54329`.
