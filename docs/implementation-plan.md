@@ -11,6 +11,7 @@ The product should let a writer create a project, write structured screenplay bl
 - `C:/MyTemplates/laper-workspace-reference/notes/script-authoring-interaction-spec.md`
 - `C:/MyTemplates/laper-workspace-reference/notes/laper-workspace-design-and-feature-breakdown.md`
 - `C:/MyTemplates/laper-workspace-reference/notes/laper-workspace-function-implementation-analysis.md`
+- `C:/MyTemplates/laper-workspace-reference/notes/laper-entity-detail-crud-research-2026-05-16.md`
 - Visual baseline: `C:/MyProjects/script-format-demo-next`
 
 ## Problem Frame
@@ -220,3 +221,31 @@ Acceptance:
 
 - The app is usable as a local screenplay authoring workspace.
 - Remaining limitations are documented.
+
+### M6. Entity Detail Workbench
+
+Goal: add reference-aligned detail editing for derived and manual production entities.
+
+Source plan:
+
+- `docs/entity-workbench-detail-plan.md`
+
+Tasks:
+
+1. Add workbench entity selection and script context-menu `Open` routing.
+2. Add persisted metadata records for Character profiles, Scene production notes, and Location scout profiles.
+3. Expand Prop metadata editing to match the reference modal.
+4. Add Character, Scene, Location, and Prop detail dialogs.
+5. Keep script source text canonical; detail dialogs edit production metadata.
+6. Add delete confirmation for profile/manual entity deletion.
+
+Acceptance:
+
+- Scene `Open` opens the corresponding Scene Board card/list item.
+- Character `Open` opens the corresponding Character card.
+- Scene detail saves description and art requirements.
+- Character detail saves gender, age, role, bio, and appearance notes.
+- Location detail saves scout/contact/cost/availability fields.
+- Prop detail saves category, description, and image note.
+- Source script blocks remain intact when profile metadata is edited or deleted.
+- Tests and browser verification pass.
