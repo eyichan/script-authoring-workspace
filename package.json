@@ -13,7 +13,8 @@
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "sample:cyber-monkey": "tsx scripts/create-cyber-monkey-sample.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
