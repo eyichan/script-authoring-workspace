@@ -34,6 +34,11 @@ const blocks = [
       "Rain falls upward from the city below. Delivery drones split around a gold-streaked rider surfing a stolen police hoverbike.",
   },
   {
+    type: "comment",
+    text:
+      "VFX NOTE: The skyway rain should read like reversed data packets, not ordinary weather.",
+  },
+  {
     type: "character",
     text: "SUN WUKONG",
   },
@@ -45,6 +50,10 @@ const blocks = [
     type: "dialogue",
     text:
       "Tell Heaven their firewall is old, their badges are fake, and their favorite monkey just learned root access.",
+  },
+  {
+    type: "subtitle",
+    text: "SUBTITLE: CELESTIAL SECURITY ALERT - unauthorized simian process detected.",
   },
   {
     type: "scene",
@@ -138,6 +147,85 @@ const blocks = [
   },
 ] as const;
 
+const existingProjectShowcaseBlocks = [
+  {
+    id: "block-cyber-monkey-comment-vfx",
+    afterBlockId: "block-cyber-monkey-03",
+    type: "comment",
+    text:
+      "VFX NOTE: The skyway rain should read like reversed data packets, not ordinary weather.",
+  },
+  {
+    id: "block-cyber-monkey-subtitle-alert",
+    afterBlockId: "block-cyber-monkey-06",
+    type: "subtitle",
+    text:
+      "SUBTITLE: CELESTIAL SECURITY ALERT - unauthorized simian process detected.",
+  },
+] as const;
+
+async function ensureExistingProjectShowcaseBlocks() {
+  const script = await prisma.script.findFirst({
+    where: { projectId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
+  if (!script) return 0;
+
+  let createdCount = 0;
+
+  await prisma.$transaction(async (tx) => {
+    const orderedBlocks = await tx.scriptBlock.findMany({
+      where: { scriptId: script.id },
+      orderBy: { position: "asc" },
+      select: { id: true },
+    });
+
+    for (const block of existingProjectShowcaseBlocks) {
+      const exists = orderedBlocks.some((current) => current.id === block.id);
+
+      if (exists) continue;
+
+      await tx.scriptBlock.create({
+        data: {
+          id: block.id,
+          scriptId: script.id,
+          type: block.type,
+          text: block.text,
+          position: orderedBlocks.length + createdCount + 1,
+        },
+      });
+
+      const anchorIndex = orderedBlocks.findIndex(
+        (current) => current.id === block.afterBlockId,
+      );
+      const insertIndex = anchorIndex >= 0 ? anchorIndex + 1 : orderedBlocks.length;
+
+      orderedBlocks.splice(insertIndex, 0, { id: block.id });
+      createdCount += 1;
+    }
+
+    if (!createdCount) return;
+
+    for (const [index, block] of orderedBlocks.entries()) {
+      await tx.scriptBlock.update({
+        where: { id: block.id },
+        data: { position: -(index + 1) },
+      });
+    }
+
+    for (const [index, block] of orderedBlocks.entries()) {
+      await tx.scriptBlock.update({
+        where: { id: block.id },
+        data: { position: index + 1 },
+      });
+    }
+  });
+
+  return createdCount;
+}
+
 async function main() {
   const existing = await prisma.project.findUnique({
     where: { id: projectId },
@@ -153,9 +241,10 @@ async function main() {
         updatedAt: new Date(),
       },
     });
+    const createdCount = await ensureExistingProjectShowcaseBlocks();
 
     console.log(
-      `${existing.title} already exists. Reactivated and moved to the top without overwriting script content.`,
+      `${existing.title} already exists. Reactivated and added ${createdCount} missing showcase blocks without overwriting script content.`,
     );
     return;
   }
