@@ -88,6 +88,19 @@ Locked or simulated modules:
 
 Verified on 2026-05-16 in the authenticated Laper browser session. The session displayed `Offline · editing locally`, so this section describes visible client behavior and UI contracts, not proven server persistence.
 
+### Beats
+
+Beats page:
+
+- tabs: `Arrangement`, `Beats`, `Outline`
+- primary action: `Add`
+- left contextual list contains beat names and a drag-to-reorder affordance
+- `Beats` tab shows an inline beat editor with selected beat number, title input, and description textarea
+- `Arrangement` tab shows a timeline scale, `Tidy`, beat card, duration, and `Edit beat`
+- `Outline` tab shows a project-level multiline outline editor
+- `New Beat` fields: Beat Name, Color, Description
+- `Edit Beat` fields: Beat Name, Color, Description, plus `Delete` and `Save`
+
 ### Characters
 
 Characters page:

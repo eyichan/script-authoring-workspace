@@ -224,7 +224,7 @@ Acceptance:
 
 ### M6. Entity Detail Workbench
 
-Goal: add reference-aligned detail editing for derived and manual production entities.
+Goal: add reference-aligned Beat planning and detail editing for derived and manual production entities.
 
 Source plan:
 
@@ -233,11 +233,12 @@ Source plan:
 Tasks:
 
 1. Add workbench entity selection and script context-menu `Open` routing.
-2. Add persisted metadata records for Character profiles, Scene production notes, and Location scout profiles.
-3. Expand Prop metadata editing to match the reference modal.
-4. Add Character, Scene, Location, and Prop detail dialogs.
-5. Keep script source text canonical; detail dialogs edit production metadata.
-6. Add delete confirmation for profile/manual entity deletion.
+2. Add reference-aligned Beat Arrangement, Beats, and Outline views.
+3. Add persisted metadata records for Character profiles, Scene production notes, and Location scout profiles.
+4. Expand Prop metadata editing to match the reference modal.
+5. Add Character, Scene, Location, Prop, and Beat detail dialogs.
+6. Keep script source text canonical; detail dialogs edit production metadata.
+7. Add delete confirmation for profile/manual entity deletion.
 
 Acceptance:
 
@@ -247,5 +248,6 @@ Acceptance:
 - Character detail saves gender, age, role, bio, and appearance notes.
 - Location detail saves scout/contact/cost/availability fields.
 - Prop detail saves category, description, and image note.
+- Beat page supports arrangement timeline, inline beat editing, outline editing, color metadata, and modal create/edit/delete.
 - Source script blocks remain intact when profile metadata is edited or deleted.
 - Tests and browser verification pass.

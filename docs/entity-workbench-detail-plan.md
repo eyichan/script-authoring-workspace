@@ -2,7 +2,7 @@
 
 ## Objective
 
-Bring the local workbench closer to the verified Laper entity workflow by adding detail editing for Characters, Scenes, Locations, and Props while preserving script blocks as the source of truth.
+Bring the local workbench closer to the verified Laper workflow by adding reference-aligned Beat planning and detail editing for Characters, Scenes, Locations, and Props while preserving script blocks as the source of truth.
 
 ## Evidence
 
@@ -29,6 +29,7 @@ Implemented:
 Missing:
 
 - Workbench detail dialogs for Characters, Scenes, Locations, and Props.
+- Reference-aligned Beat `Arrangement`, `Beats`, and `Outline` views.
 - Metadata persistence for derived entity details.
 - Script context-menu `Open` routing to the corresponding workbench entity.
 - Selected workbench entity state and visible selected-card treatment.
@@ -43,7 +44,8 @@ Missing:
 5. Character detail edits update profile metadata. Renaming script mentions is a separate explicit action.
 6. Location detail edits update scout/contact/cost/availability metadata.
 7. Prop detail edits update manual prop metadata.
-8. Delete must name the affected record and require confirmation.
+8. Beat editing remains manual and supports inline content editing plus modal color/delete controls.
+9. Delete must name the affected record and require confirmation.
 
 ## Data Model Additions
 
@@ -88,6 +90,14 @@ Add persisted records keyed by script/project and stable derived ids:
   - `category`
   - `description`
   - `imageNote`
+- Expand `Beat`
+  - `color`
+  - `order`
+  - `durationMinutes`
+  - `description`
+- Add `ScriptOutline`
+  - `scriptId`
+  - `text`
 
 ## UI Plan
 
@@ -100,6 +110,40 @@ Create a detail dialog pattern for workbench entities:
 - Save button.
 - Delete button only where the reference shows deletion or where the entity is manual.
 - Confirm dialog for destructive delete.
+
+### Beats
+
+Page should show:
+
+- left contextual beat list
+- draggable reorder affordance
+- tabs: Arrangement, Beats, Outline
+- `Add` primary action
+
+`Beats` tab should include:
+
+- selected beat number
+- inline beat title input
+- inline beat description textarea
+- date/title treatment consistent with the reference
+
+`Arrangement` tab should include:
+
+- timeline scale
+- beat card with title, description preview, duration, and `Edit beat`
+- `Tidy` action
+
+`Outline` tab should include:
+
+- project title
+- multiline outline editor
+
+Dialog should include:
+
+- Beat Name
+- Color
+- Description
+- Delete and Save for edit
 
 ### Characters
 
@@ -230,6 +274,19 @@ Verification:
 
 - E2E: edit scene description, refresh, verify card preview persists.
 
+### Slice 2A: Beat Planning Alignment
+
+- Add Arrangement / Beats / Outline tab views.
+- Add beat color and duration fields to persistence.
+- Keep inline title/description editing for the selected beat.
+- Add `New Beat` and `Edit Beat` dialogs with color and delete controls.
+- Add outline persistence.
+
+Verification:
+
+- E2E: create a beat, edit title/description inline, edit color in modal, refresh, verify.
+- E2E: switch Arrangement / Beats / Outline and verify each view renders.
+
 ### Slice 3: Character Profile Metadata
 
 - Add `CharacterProfile` persistence.
@@ -274,6 +331,7 @@ Verification:
 ## Acceptance Criteria
 
 - Workbench cards expose reference-aligned internal data and actions.
+- Beat page supports Arrangement, inline Beat editing, Outline, modal create/edit, and guarded delete.
 - Entity detail dialogs persist metadata across refresh.
 - Script-derived entity identity remains stable enough to retain metadata.
 - Right-click `Open` routes to the corresponding entity page where a corresponding entity exists.

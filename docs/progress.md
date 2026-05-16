@@ -315,4 +315,4 @@ M5 complete. Functional script workspace is implemented and verified.
 - Keep `.env.local` untracked; commit `.env.example` so the database URL contract is recoverable in later sessions.
 - Use the lightweight domain PDF generator for native PDF downloads; reserve richer pagination and layout rendering for a later export-hardening slice.
 - Collaboration covers persisted invite/share state, reviewer removal, and share revocation, not real-time multiplayer editing.
-- Entity workbench detail editing is now tracked as a separate post-M5 slice in `docs/entity-workbench-detail-plan.md`, based on the 2026-05-16 authenticated Laper reference pass.
+- Entity workbench detail editing and reference-aligned Beat planning are now tracked as a separate post-M5 slice in `docs/entity-workbench-detail-plan.md`, based on the 2026-05-16 authenticated Laper reference pass.
