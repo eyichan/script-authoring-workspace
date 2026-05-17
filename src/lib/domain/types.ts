@@ -144,6 +144,15 @@ export type ScriptOutline = {
   text: string;
 };
 
+export type ScriptCover = {
+  scriptId: string;
+  title: string;
+  writtenBy: string;
+  draftDate: string;
+  contact: string;
+  notes: string;
+};
+
 export type AssetTaskKind =
   | "movie-poster"
   | "casting-poster"
@@ -192,5 +201,6 @@ export type WorkspaceView = {
   sceneProductionNotes: SceneProductionNote[];
   locationProfiles: LocationProfile[];
   outline?: ScriptOutline;
+  cover?: ScriptCover;
   collaboration: CollaborationState;
 };

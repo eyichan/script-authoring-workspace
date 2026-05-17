@@ -86,6 +86,7 @@ model Script {
   sceneProductionNotes SceneProductionNote[]
   locationProfiles     LocationProfile[]
   outline              ScriptOutline?
+  cover                ScriptCover?
 
   @@index([projectId])
 }
@@ -198,6 +199,18 @@ model LocationProfile {
 model ScriptOutline {
   scriptId  String   @id
   text      String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  script    Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+}
+
+model ScriptCover {
+  scriptId  String   @id
+  title     String
+  writtenBy String   @default("")
+  draftDate String   @default("")
+  contact   String   @default("")
+  notes     String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   script    Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)

@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type {
@@ -51,6 +52,11 @@ type EntityDetailDialogProps = {
   onSaveLocation: (input: LocationProfileInput) => void;
   onSaveProp: (input: PropDetailInput) => void;
   onSaveScene: (input: SceneProductionNoteInput) => void;
+  onDeleteBeat: (beatId: string) => void;
+  onDeleteCharacter: (characterId: string) => void;
+  onDeleteLocation: (locationId: string) => void;
+  onDeleteProp: (propId: string) => void;
+  onDeleteScene: (sceneId: string) => void;
 };
 
 const colorOptions = ["racing-green", "slate", "amber", "rose", "violet"];
@@ -80,7 +86,14 @@ export function EntityDetailDialog({
   onSaveLocation,
   onSaveProp,
   onSaveScene,
+  onDeleteBeat,
+  onDeleteCharacter,
+  onDeleteLocation,
+  onDeleteProp,
+  onDeleteScene,
 }: EntityDetailDialogProps) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   if (!target) return null;
 
   const submitLabel = mutationPending ? "Saving" : "Save";
@@ -157,6 +170,14 @@ export function EntityDetailDialog({
   };
 
   const title = getDialogTitle(target, beats, characters, locations, props, scenes);
+  const deleteCopy = getDeleteCopy(target.kind);
+  const handleDelete = () => {
+    if (target.kind === "beat") onDeleteBeat(target.id);
+    if (target.kind === "character") onDeleteCharacter(target.id);
+    if (target.kind === "location") onDeleteLocation(target.id);
+    if (target.kind === "prop") onDeleteProp(target.id);
+    if (target.kind === "scene") onDeleteScene(target.id);
+  };
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-[#151816]/45 px-4 py-6">
@@ -207,17 +228,93 @@ export function EntityDetailDialog({
             <PropFields prop={props.find((item) => item.id === target.id)} />
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-[#e5e8e5] px-5 py-4">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={mutationPending}>
-            {submitLabel}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e5e8e5] px-5 py-4">
+          <div className="min-w-[220px] flex-1">
+            {confirmingDelete ? (
+              <div className="rounded-lg border border-[#edd2ce] bg-[#fff8f7] p-3 text-[12px] leading-5 text-[#70423c]">
+                <strong className="block text-[#4d2621]">{deleteCopy.title}</strong>
+                {deleteCopy.body}
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={mutationPending}
+                    onClick={() => setConfirmingDelete(false)}
+                    className="h-8"
+                  >
+                    Keep
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={mutationPending}
+                    onClick={handleDelete}
+                    className="h-8 bg-[#b0473e] text-white hover:bg-[#9d3d35]"
+                  >
+                    Confirm Delete
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={mutationPending}
+                onClick={() => setConfirmingDelete(true)}
+                className="h-8 rounded-full px-3 text-[12px] text-[#9d4a42] hover:bg-[#fff0ee] hover:text-[#8b3c35] active:translate-y-0"
+              >
+                <Trash2 className="size-3.5" data-icon="inline-start" />
+                {deleteCopy.button}
+              </Button>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={mutationPending}>
+              {submitLabel}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
   );
+}
+
+function getDeleteCopy(kind: EntityDetailTarget["kind"]) {
+  if (kind === "character") {
+    return {
+      button: "Delete Metadata",
+      title: "Delete character metadata?",
+      body: "Source screenplay lines are kept. Only this character profile metadata is removed.",
+    };
+  }
+  if (kind === "scene") {
+    return {
+      button: "Delete Metadata",
+      title: "Delete scene metadata?",
+      body: "The scene heading and linked script blocks remain. Only production notes and generation status are removed.",
+    };
+  }
+  if (kind === "location") {
+    return {
+      button: "Delete Metadata",
+      title: "Delete location metadata?",
+      body: "Scene headings remain in the screenplay. Only scouting and contact metadata are removed.",
+    };
+  }
+  if (kind === "beat") {
+    return {
+      button: "Delete Beat",
+      title: "Delete beat?",
+      body: "This removes the persisted outline beat from the current script.",
+    };
+  }
+  return {
+    button: "Delete Prop",
+    title: "Delete prop?",
+    body: "This removes the persisted prop record from the current script.",
+  };
 }
 
 function BeatFields({ beat }: { beat?: Beat }) {

@@ -142,6 +142,27 @@ async function main() {
     });
   }
 
+  if (workspace.cover) {
+    await prisma.scriptCover.upsert({
+      where: { scriptId: workspace.cover.scriptId },
+      update: {
+        title: workspace.cover.title,
+        writtenBy: workspace.cover.writtenBy,
+        draftDate: workspace.cover.draftDate,
+        contact: workspace.cover.contact,
+        notes: workspace.cover.notes,
+      },
+      create: {
+        scriptId: workspace.cover.scriptId,
+        title: workspace.cover.title,
+        writtenBy: workspace.cover.writtenBy,
+        draftDate: workspace.cover.draftDate,
+        contact: workspace.cover.contact,
+        notes: workspace.cover.notes,
+      },
+    });
+  }
+
   for (const task of workspace.assetTasks) {
     await prisma.assetTask.upsert({
       where: { id: task.id },

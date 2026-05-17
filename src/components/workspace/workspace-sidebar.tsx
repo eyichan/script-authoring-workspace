@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   MapPin,
   PenLine,
+  Plus,
   User,
 } from "lucide-react";
 
@@ -42,6 +43,7 @@ type WorkspaceSidebarProps = {
   activeScene: string;
   projectMutationPending: boolean;
   projectTitleValue: string;
+  quickActions?: Array<{ label: string; onClick: () => void }>;
   sectionTitle: string;
   sidebarItems: SidebarItem[];
   onOpenProjects: () => void;
@@ -68,6 +70,7 @@ export function WorkspaceSidebar({
   activeScene,
   projectMutationPending,
   projectTitleValue,
+  quickActions = [],
   sectionTitle,
   sidebarItems,
   onOpenProjects,
@@ -149,7 +152,26 @@ export function WorkspaceSidebar({
       </nav>
 
       <section className="mt-5 pl-4 max-[1180px]:hidden">
-        <h2 className="mb-4 text-[16px] font-normal">{sectionTitle}</h2>
+        <div className="mb-4 flex w-[214px] items-center justify-between gap-2">
+          <h2 className="text-[16px] font-normal">{sectionTitle}</h2>
+          {quickActions.length ? (
+            <div className="flex gap-1">
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  aria-label={`Add ${action.label} from sidebar`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={action.onClick}
+                  className="inline-flex h-7 items-center gap-1 rounded-full border border-[#dfe4e1] bg-[#fcfdfc] px-2 text-[11px] font-medium text-[#2e6248] shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-[#f8faf9]"
+                >
+                  <Plus className="size-3" />
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <div className="flex flex-col gap-2">
           {sidebarItems.map((item) => (
             <button

@@ -39,6 +39,7 @@ async function latestActiveProject() {
           sceneProductionNotes: true,
           locationProfiles: true,
           outline: true,
+          cover: true,
         },
       },
       collaborators: { orderBy: { createdAt: "asc" } },
@@ -384,6 +385,129 @@ test("persists workbench entity detail editor metadata", async ({ page }) => {
     .toBe("Chrome edge reference.");
 });
 
+test("builds a final script from sidebar scene and character creation", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  await page.locator("aside").getByRole("button", { name: "Add Scene from sidebar" }).click({
+    force: true,
+  });
+  const sceneInput = page.getByRole("textbox", { name: /scene location block 1/i });
+  await expect(sceneInput).toBeFocused();
+  await sceneInput.fill("workflow diner");
+
+  await page.locator("aside").getByRole("button", { name: "Add Character from sidebar" }).click({
+    force: true,
+  });
+  const characterInput = page.locator('input[aria-label="character block 2"]');
+  await expect(characterInput).toBeFocused();
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.blocks.length)
+    .toBe(2);
+  await characterInput.fill("Riley Pilot");
+  await characterInput.press("Enter");
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.blocks.length)
+    .toBe(3);
+
+  const dialogueInput = page.getByRole("textbox", { name: /dialogue block 3/i });
+  await expect(dialogueInput).toBeFocused();
+  await dialogueInput.fill("We can finish the draft from here.");
+
+  await page.locator("main").getByRole("tab", { name: "Cover" }).click();
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.blocks[2]?.text)
+    .toBe("We can finish the draft from here.");
+  await page
+    .locator("main")
+    .getByRole("textbox", { name: "Title", exact: true })
+    .fill("Workflow Final Script");
+  await page.locator("main").getByRole("textbox", { name: "Written By" }).fill("E2E Writer");
+  await page
+    .locator("main")
+    .getByRole("textbox", { name: "Draft Date" })
+    .fill("May 17, 2026");
+  await page
+    .locator("main")
+    .getByRole("textbox", { name: "Contact" })
+    .fill("workflow@example.com");
+  await page.getByRole("button", { name: "Save Cover" }).click();
+
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.cover?.title)
+    .toBe("WORKFLOW FINAL SCRIPT");
+
+  await page.locator("main").getByRole("tab", { name: "Script" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Final Draft" }).click({ force: true });
+  const download = await downloadPromise;
+  const path = await download.path();
+  expect(path).toBeTruthy();
+
+  const content = await readFile(path!, "utf8");
+  expect(content).toContain("INT. WORKFLOW DINER - DAY");
+  expect(content).toContain("RILEY PILOT");
+  expect(content).toContain("We can finish the draft from here.");
+});
+
+test("confirms metadata deletion while preserving source script lines", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+
+  const project = await latestActiveProject();
+  const script = project.scripts[0];
+
+  if (!script) {
+    throw new Error("Expected a script for the metadata delete test.");
+  }
+
+  await prisma.scriptBlock.createMany({
+    data: [
+      {
+        id: `block-${randomUUID()}`,
+        scriptId: script.id,
+        type: "scene",
+        text: "INT. DELETE TEST ROOM - DAY",
+        position: 1,
+      },
+      {
+        id: `block-${randomUUID()}`,
+        scriptId: script.id,
+        type: "character",
+        text: "DELETE TESTER",
+        position: 2,
+      },
+    ],
+  });
+
+  await page.reload();
+  await page.getByLabel("Characters").click();
+  await page.locator("main").getByRole("button", { name: "Edit" }).first().click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Role/Identity").fill("Archivist");
+  await dialog.getByLabel("Bio").fill("Temporary profile for delete confirmation.");
+  await dialog.getByRole("button", { name: "Save" }).click();
+
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.characterProfiles.length)
+    .toBe(1);
+
+  await page.locator("main").getByRole("button", { name: "Edit" }).first().click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Delete Metadata" }).click();
+  await expect(dialog).toContainText("Source screenplay lines are kept");
+  await dialog.getByRole("button", { name: "Confirm Delete" }).click();
+
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.characterProfiles.length)
+    .toBe(0);
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.blocks.map((block) => block.text))
+    .toContain("DELETE TESTER");
+});
+
 test("persists script blocks and workbench records across refresh", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Home").click();
@@ -504,9 +628,12 @@ test("downloads a Final Draft export from persisted script blocks", async ({ pag
   await page.getByRole("button", { name: "New Project" }).click({ force: true });
 
   await page.getByRole("button", { name: "Scene", exact: true }).click({ force: true });
-  await page.getByRole("textbox", { name: /scene location block 1/i }).fill("export bay");
-  await page.getByRole("button", { name: "Invite" }).click({ force: true });
-  await expect(page.getByRole("button", { name: /INT EXPORT BAY - DAY/ })).toBeVisible();
+  const sceneInput = page.getByRole("textbox", { name: /scene location block 1/i });
+  await sceneInput.fill("export bay");
+  await sceneInput.press("Enter");
+  await expect
+    .poll(async () => (await latestActiveProject()).scripts[0]?.blocks[0]?.text)
+    .toBe("INT. EXPORT BAY - DAY");
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export Final Draft" }).click({ force: true });

@@ -54,6 +54,7 @@ const projectInclude = {
       sceneProductionNotes: { orderBy: { createdAt: "asc" } },
       locationProfiles: { orderBy: { createdAt: "asc" } },
       outline: true,
+      cover: true,
     },
   },
 } satisfies Prisma.ProjectInclude;
@@ -232,6 +233,16 @@ function mapWorkspace(project: ProjectWithWorkspace): WorkspaceView {
       ? {
           scriptId: scriptRecord.outline.scriptId,
           text: scriptRecord.outline.text,
+        }
+      : undefined,
+    cover: scriptRecord.cover
+      ? {
+          scriptId: scriptRecord.cover.scriptId,
+          title: scriptRecord.cover.title,
+          writtenBy: scriptRecord.cover.writtenBy,
+          draftDate: scriptRecord.cover.draftDate,
+          contact: scriptRecord.cover.contact,
+          notes: scriptRecord.cover.notes,
         }
       : undefined,
     collaboration: {
@@ -452,11 +463,13 @@ export async function insertScriptBlockSnapshot({
   projectId,
   scriptId,
   type,
+  text = "",
   afterBlockId,
 }: {
   projectId: string;
   scriptId: string;
   type: ScriptBlockType;
+  text?: string;
   afterBlockId?: string;
 }): Promise<ScriptMutationSnapshot> {
   const blockId = `block-${randomUUID()}`;
@@ -477,7 +490,7 @@ export async function insertScriptBlockSnapshot({
         id: blockId,
         scriptId,
         type,
-        text: "",
+        text,
         position: blocks.length + 1,
       },
     });
@@ -499,12 +512,14 @@ export async function commitAndInsertScriptBlockSnapshot({
   type,
   afterBlockId,
   text,
+  insertedText = "",
 }: {
   projectId: string;
   scriptId: string;
   type: ScriptBlockType;
   afterBlockId: string;
   text: string;
+  insertedText?: string;
 }): Promise<ScriptMutationSnapshot> {
   const blockId = `block-${randomUUID()}`;
 
@@ -536,7 +551,7 @@ export async function commitAndInsertScriptBlockSnapshot({
         id: blockId,
         scriptId,
         type,
-        text: "",
+        text: insertedText,
         position: blocks.length + 1,
       },
     });
@@ -795,6 +810,69 @@ export async function deleteAssetSnapshot({
     message: deleted.count
       ? "Asset reference removed from the persisted library."
       : "Asset reference was already removed.",
+  };
+}
+
+export async function deleteCharacterProfileSnapshot({
+  projectId,
+  scriptId,
+  characterId,
+}: {
+  projectId: string;
+  scriptId: string;
+  characterId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const deleted = await prisma.characterProfile.deleteMany({
+    where: { scriptId, characterId },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Character metadata removed. Source screenplay lines were kept."
+      : "Character metadata was already empty.",
+  };
+}
+
+export async function deleteSceneProductionNoteSnapshot({
+  projectId,
+  scriptId,
+  sceneId,
+}: {
+  projectId: string;
+  scriptId: string;
+  sceneId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const deleted = await prisma.sceneProductionNote.deleteMany({
+    where: { scriptId, sceneId },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Scene metadata removed. Source scene heading was kept."
+      : "Scene metadata was already empty.",
+  };
+}
+
+export async function deleteLocationProfileSnapshot({
+  projectId,
+  scriptId,
+  locationId,
+}: {
+  projectId: string;
+  scriptId: string;
+  locationId: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const deleted = await prisma.locationProfile.deleteMany({
+    where: { scriptId, locationId },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: deleted.count
+      ? "Location metadata removed. Source scene headings were kept."
+      : "Location metadata was already empty.",
   };
 }
 
@@ -1184,6 +1262,54 @@ export async function updateScriptOutlineSnapshot({
   return {
     ...(await getWorkspaceSnapshot(projectId)),
     message: "Script outline saved.",
+  };
+}
+
+export async function updateScriptCoverSnapshot({
+  projectId,
+  scriptId,
+  title,
+  writtenBy,
+  draftDate,
+  contact,
+  notes,
+}: {
+  projectId: string;
+  scriptId: string;
+  title: string;
+  writtenBy: string;
+  draftDate: string;
+  contact: string;
+  notes: string;
+}): Promise<WorkbenchMutationSnapshot> {
+  const nextTitle = title.trim();
+
+  if (!nextTitle) {
+    throw new Error("Cover title cannot be empty.");
+  }
+
+  await prisma.scriptCover.upsert({
+    where: { scriptId },
+    update: {
+      title: nextTitle,
+      writtenBy,
+      draftDate,
+      contact,
+      notes,
+    },
+    create: {
+      scriptId,
+      title: nextTitle,
+      writtenBy,
+      draftDate,
+      contact,
+      notes,
+    },
+  });
+
+  return {
+    ...(await getWorkspaceSnapshot(projectId)),
+    message: "Script cover saved.",
   };
 }
 

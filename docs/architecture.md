@@ -18,6 +18,7 @@ Domain code owns screenplay concepts and pure transformations:
 
 - project
 - script
+- script cover
 - script block
 - scene
 - character
@@ -104,6 +105,7 @@ Current persistence behavior:
 - `src/app/actions/projects.ts` persists project create, open, trash, and restore flows through server actions.
 - `src/app/actions/script-blocks.ts` persists script block insert, text update, duplicate, delete, and resequencing flows through server actions.
 - `src/app/actions/workbench.ts` persists manual Beats, Props, Assets, Character profile metadata, Scene production notes, Location scout metadata, and Script outline text through server actions.
+- `src/app/actions/workbench.ts` also persists Script Cover fields and metadata-only deletes for script-derived Character, Scene, and Location detail records.
 - `src/app/actions/collaboration.ts` persists invite link creation and collaborator records through server actions.
 
 ### UI
@@ -143,6 +145,8 @@ Current UI behavior:
 
 - The Script page renders ordered `ScriptBlock` records instead of static screenplay lines.
 - The floating script toolbar directly appends an editable screenplay block to the script canvas.
+- The Script sidebar can add Scene and Character blocks directly into the screenplay source, then focus the inserted block.
+- Sidebar Scene/Character insertion commits the current active source block and inserts the new block in one transaction so unblurred edits are not lost.
 - Script block textarea edits update the source block text in local state.
 - Scene blocks render as structured canvas controls with shared prefix and time-of-day dropdown options plus a location input.
 - Adding a valid scene block creates a derived scene and makes it the active sidebar scene.
@@ -165,6 +169,9 @@ Current UI behavior:
 - Assets is a generated/imported task page; `Import` creates local `AssetTask` records and Assets expose Generate and Tasks tabs.
 - `src/components/workspace/entity-detail-dialog.tsx` owns the shared detail editor overlay for Beat, Character, Scene, Location, and Prop metadata.
 - Entity detail saves update production metadata only; script-derived heading and character cue source text remains owned by Script blocks.
+- Entity detail delete actions are confirmed. Character, Scene, and Location deletes remove only metadata and preserve source screenplay blocks.
+- Script Cover renders editable title, writer, draft date, contact, and notes fields backed by persisted `ScriptCover` data.
+- Workbench cards and tables merge profile, production note, scout, prop, and asset metadata into previews instead of only showing derived names and counts.
 - Storyboard remains a locked module and reuses the unavailable-module visual pattern.
 - Home opens a local Recents project library with Active and Trash sections.
 - Projects support local create, open, delete-to-trash, restore, and right-click project actions.
@@ -269,6 +276,17 @@ Canvas input Enter
   -> client focuses the inserted block without dropping unblurred text
 ```
 
+Implemented sidebar source insertion flow:
+
+```text
+Script sidebar Add Scene / Add Character
+  -> prevent quick action from forcing a blur-only save first
+  -> commit current active ScriptBlock text and insert preset Scene/Character text in one server action
+  -> Prisma transaction updates current ScriptBlock, creates inserted ScriptBlock, and resequences blocks
+  -> return WorkspaceSnapshot plus inserted activeBlockId
+  -> client focuses the inserted block and recalculates derived entities
+```
+
 Implemented persisted workbench flow:
 
 ```text
@@ -307,6 +325,26 @@ Character / Scene / Location / Outline detail save
   -> Prisma upsert constrained by scriptId plus derived entity id
   -> return WorkspaceSnapshot plus status message
   -> client can merge persisted metadata with script-derived entity cards and dialogs
+```
+
+Implemented metadata-only delete flow:
+
+```text
+Character / Scene / Location detail delete confirmation
+  -> server action with projectId, scriptId, and derived entity id
+  -> Prisma deleteMany constrained to the metadata table and current script
+  -> source ScriptBlock rows remain unchanged
+  -> return WorkspaceSnapshot plus status message
+```
+
+Implemented persisted cover flow:
+
+```text
+Script Cover form save
+  -> server action with projectId, scriptId, and cover fields
+  -> Prisma upsert ScriptCover by scriptId
+  -> return WorkspaceSnapshot plus status message
+  -> client rerenders the cover preview from persisted cover fields
 ```
 
 Implemented persisted collaboration flow:
@@ -351,6 +389,9 @@ Functional:
 - export formatter tests cover ordered Fountain text, Final Draft XML escaping, native PDF structure, and generated package metadata.
 - E2E tests assert pressing Enter commits the current unblurred script line before inserting the next block.
 - E2E tests assert the Character -> Dialogue -> Character writing sequence persists ordered blocks and updates the Characters page from derived script state.
+- E2E tests assert sidebar Scene/Character creation can produce a final exported script with scene, character, and dialogue content.
+- E2E tests assert Script Cover fields persist to Postgres.
+- E2E tests assert metadata delete confirmation removes character metadata while preserving source script lines.
 
 Persistence:
 

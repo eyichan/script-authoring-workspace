@@ -29,10 +29,13 @@ import { Button } from "@/components/ui/button";
 import type {
   AssetTask,
   Beat,
+  CharacterProfile,
   DerivedCharacter,
   DerivedLocation,
   DerivedScene,
+  LocationProfile,
   Prop,
+  SceneProductionNote,
 } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +50,9 @@ export type WorkbenchCard = {
   id: string;
   title: string;
   persisted: boolean;
+  subtitle?: string;
+  description?: string;
+  meta?: string[];
 };
 
 export const beatTabs = [
@@ -402,8 +408,11 @@ export function WorkbenchPage({
   cards,
   assetTasks,
   characters,
+  characterProfiles,
+  locationProfiles,
   locations,
   props,
+  sceneNotes,
   scenes,
   mutationPending,
   onDeleteCard,
@@ -421,8 +430,11 @@ export function WorkbenchPage({
   cards: WorkbenchCard[];
   assetTasks: AssetTask[];
   characters: DerivedCharacter[];
+  characterProfiles: CharacterProfile[];
+  locationProfiles: LocationProfile[];
   locations: DerivedLocation[];
   props: Prop[];
+  sceneNotes: SceneProductionNote[];
   scenes: DerivedScene[];
   mutationPending: boolean;
   onDeleteCard: (id: string) => void;
@@ -455,6 +467,7 @@ export function WorkbenchPage({
           <SceneCards
             activeItemId={activeItemId}
             scenes={scenes}
+            sceneNotes={sceneNotes}
             generatedStills={generatedStills}
             onEditScene={onEditScene}
             onGenerateStill={onGenerateStill}
@@ -463,13 +476,13 @@ export function WorkbenchPage({
       ) : page === "Characters" && activeTab === "Relationships" ? (
         <CharacterRelationships characters={characters} scenes={scenes} />
       ) : page === "Characters" && activeTab === "Casting" ? (
-        <CharacterCastingTable characters={characters} />
+        <CharacterCastingTable characters={characters} profiles={characterProfiles} />
       ) : page === "Props" && activeTab === "List" ? (
         <PropList props={props} mutationPending={mutationPending} onDeleteProp={onDeleteCard} />
       ) : page === "Locations" && activeTab === "Relationships" ? (
         <LocationRelationships locations={locations} scenes={scenes} />
       ) : page === "Locations" && activeTab === "Scout Sheet" ? (
-        <ScoutSheet locations={locations} />
+        <ScoutSheet locations={locations} profiles={locationProfiles} />
       ) : page === "Assets" && activeTab === "Generate" ? (
         <AssetGenerateGallery />
       ) : page === "Assets" && activeTab === "Tasks" ? (
@@ -606,19 +619,25 @@ function CharacterRelationships({
 
 function CharacterCastingTable({
   characters,
+  profiles,
 }: {
   characters: DerivedCharacter[];
+  profiles: CharacterProfile[];
 }) {
   return (
     <EntityTable
       columns={["Character", "Scenes", "Lines", "Casting Status", "Notes"]}
-      rows={characters.map((character) => [
-        character.displayName,
-        String(character.sceneIds.length),
-        String(character.dialogueLineCount),
-        "Uncast",
-        "Profile pending",
-      ])}
+      rows={characters.map((character) => {
+        const profile = profiles.find((item) => item.characterId === character.id);
+
+        return [
+          profile?.displayName || character.displayName,
+          String(character.sceneIds.length),
+          String(character.dialogueLineCount),
+          profile?.role || "Uncast",
+          profile?.bio || profile?.appearanceNotes || "Profile pending",
+        ];
+      })}
     />
   );
 }
@@ -704,8 +723,10 @@ function LocationRelationships({
 
 function ScoutSheet({
   locations,
+  profiles,
 }: {
   locations: DerivedLocation[];
+  profiles: LocationProfile[];
 }) {
   return (
     <EntityTable
@@ -718,15 +739,22 @@ function ScoutSheet({
         "Availability",
         "Scenes",
       ]}
-      rows={locations.map((location) => [
-        location.displayName,
-        "Pending",
-        "TBD",
-        "TBD",
-        "TBD",
-        "TBD",
-        String(location.sceneIds.length),
-      ])}
+      rows={locations.map((location) => {
+        const profile = profiles.find((item) => item.locationId === location.id);
+        const availability = [profile?.availableFrom, profile?.availableUntil]
+          .filter(Boolean)
+          .join(" - ");
+
+        return [
+          profile?.displayName || location.displayName,
+          profile?.scoutingStatus || "Pending",
+          profile?.address || "TBD",
+          profile?.ownerName || "TBD",
+          profile?.dailyRental || "TBD",
+          availability || profile?.shootingHours || "TBD",
+          String(location.sceneIds.length),
+        ];
+      })}
     />
   );
 }
@@ -927,19 +955,29 @@ function formatAssetKind(kind: AssetTask["kind"]) {
 function SceneCards({
   activeItemId,
   scenes,
+  sceneNotes,
   generatedStills,
   onEditScene,
   onGenerateStill,
 }: {
   activeItemId: string;
   scenes: DerivedScene[];
+  sceneNotes: SceneProductionNote[];
   generatedStills: string[];
   onEditScene: (sceneId: string) => void;
   onGenerateStill: (sceneId: string) => void;
 }) {
   return (
     <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1">
-      {scenes.map((scene, index) => (
+      {scenes.map((scene, index) => {
+        const note = sceneNotes.find((item) => item.sceneId === scene.id);
+        const status = note
+          ? `${note.stillStatus} still / ${note.videoStatus} video`
+          : generatedStills.includes(scene.id)
+            ? "Still ready"
+            : "Metadata pending";
+
+        return (
         <div
           key={scene.id}
           className={cn(
@@ -954,9 +992,7 @@ function SceneCards({
                 {scene.locationName} - {scene.timeOfDay}
               </h3>
             </div>
-            <Badge variant="secondary">
-              {generatedStills.includes(scene.id) ? "Still ready" : "1/8"}
-            </Badge>
+            <Badge variant="secondary">{status}</Badge>
           </div>
           <div className="mb-5 flex gap-4 text-sm text-[#777771]">
             <span className="inline-flex items-center gap-1">
@@ -967,8 +1003,14 @@ function SceneCards({
             </span>
           </div>
           <p className="mb-5 text-sm leading-6 text-[#777771]">
-            {scene.heading} · {scene.blockCount} linked script blocks.
+            {note?.description ||
+              `${scene.heading} · ${scene.blockCount} linked script blocks.`}
           </p>
+          {note?.artRequirements ? (
+            <p className="mb-5 rounded-lg border border-[#e4e7e4] bg-[#f8faf8] p-3 text-[12px] leading-5 text-[#6f7772]">
+              {note.artRequirements}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"
@@ -989,7 +1031,8 @@ function SceneCards({
             </Button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -1064,11 +1107,26 @@ function WorkbenchCardGrid({
           ) : (
             <h3 className="text-[16px] font-medium leading-6">{card.title}</h3>
           )}
+          {card.subtitle ? (
+            <div className="mt-1 truncate text-[12px] font-medium text-[#5f6762]">
+              {card.subtitle}
+            </div>
+          ) : null}
           <p className="mt-2 text-[13px] leading-5 text-[#777771]">
-            {page === "Assets"
-              ? "Linked to scene production and export history."
-              : "Derived from screenplay structure and ready for production notes."}
+            {card.description ||
+              (page === "Assets"
+                ? "Linked to scene production and export history."
+                : "Derived from screenplay structure and ready for production notes.")}
           </p>
+          {card.meta?.length ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {card.meta.map((item) => (
+                <Badge key={item} variant="secondary">
+                  {item}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
           {page !== "Assets" ? (
             <Button
               type="button"

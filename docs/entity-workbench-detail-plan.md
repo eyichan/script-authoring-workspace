@@ -32,16 +32,18 @@ Implemented:
 - Prisma persistence now includes `CharacterProfile`, `SceneProductionNote`, `LocationProfile`, and `ScriptOutline`.
 - `Beat` and `Prop` include the additional fields needed by the reference-aligned edit surfaces.
 - Server actions exist for upserting Character, Scene, Location, and Outline metadata.
+- Server actions exist for deleting Character, Scene, and Location metadata without deleting script source blocks.
+- Server actions exist for persisting editable Script Cover fields.
 - Detail editor dialogs are wired for Beat, Character, Scene, Location, and Prop metadata.
-- E2E coverage verifies those detail fields persist to Postgres.
+- Detail editor deletion requires an explicit confirmation step and names whether metadata or a manual record is being removed.
+- Overview cards, casting rows, scout rows, and scene cards merge persisted metadata previews into script-derived entities.
+- Script sidebar quick actions can add a Scene or Character directly into the script source.
+- E2E coverage verifies those detail fields persist to Postgres, metadata deletion keeps source blocks, editable cover fields persist, and sidebar-created scene/character blocks export into a final script.
 
 Missing:
 
-- Guarded destructive metadata deletion.
-- Richer card previews that merge every metadata field into each overview card.
-- Script Cover editable fields.
 - Collaboration remains reachable, but the current work does not add new collaboration tab behavior.
-- Guarded delete semantics for entity metadata.
+- Direct Beat/Prop/Asset list delete buttons still execute immediately outside the detail dialog; full guarded delete for every destructive icon remains future hardening.
 
 ## Product Rules
 
@@ -106,6 +108,13 @@ Add persisted records keyed by script/project and stable derived ids:
 - Add `ScriptOutline`
   - `scriptId`
   - `text`
+- Add `ScriptCover`
+  - `scriptId`
+  - `title`
+  - `writtenBy`
+  - `draftDate`
+  - `contact`
+  - `notes`
 
 ## UI Plan
 
@@ -387,6 +396,22 @@ Verification:
 
 - E2E: deleting character profile leaves source script character block intact.
 - E2E: deleting prop removes the manual prop record.
+
+Status: detail-dialog delete confirmation is complete for Beat, Character, Scene, Location, and Prop. Derived entity delete actions remove only metadata. Direct row/card delete icons remain a follow-up if the product requires every destructive affordance to be confirmed.
+
+### Slice 7: Cover And Sidebar Workflow Hardening
+
+- Add persisted `ScriptCover` fields and an editable Script Cover form.
+- Merge cover changes into the existing Script/Cover tab surface without changing export source-of-truth rules.
+- Add Script sidebar quick actions for Scene and Character creation.
+- When sidebar insertion follows an unblurred current block, commit the current block and insert the new block in a single transaction.
+- Keep Script page sidebar selection able to focus both scene source blocks and character source blocks.
+
+Verification:
+
+- E2E: create a final script from sidebar-created Scene and Character blocks, persist cover fields, download FDX, and verify scene, character, and dialogue content.
+
+Status: complete.
 
 ## Acceptance Criteria
 

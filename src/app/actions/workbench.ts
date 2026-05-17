@@ -7,13 +7,17 @@ import {
   createPropSnapshot,
   deleteAssetSnapshot,
   deleteBeatSnapshot,
+  deleteCharacterProfileSnapshot,
+  deleteLocationProfileSnapshot,
   deletePropSnapshot,
+  deleteSceneProductionNoteSnapshot,
   importAssetSnapshot,
   updateAssetSnapshot,
   updateBeatDetailSnapshot,
   updateBeatSnapshot,
   updatePropDetailSnapshot,
   updatePropSnapshot,
+  updateScriptCoverSnapshot,
   updateScriptOutlineSnapshot,
   upsertCharacterProfileSnapshot,
   upsertLocationProfileSnapshot,
@@ -73,6 +77,36 @@ export async function deleteAssetAction(input: {
   assetId: string;
 }) {
   const snapshot = await deleteAssetSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function deleteCharacterProfileAction(input: {
+  projectId: string;
+  scriptId: string;
+  characterId: string;
+}) {
+  const snapshot = await deleteCharacterProfileSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function deleteSceneProductionNoteAction(input: {
+  projectId: string;
+  scriptId: string;
+  sceneId: string;
+}) {
+  const snapshot = await deleteSceneProductionNoteSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function deleteLocationProfileAction(input: {
+  projectId: string;
+  scriptId: string;
+  locationId: string;
+}) {
+  const snapshot = await deleteLocationProfileSnapshot(input);
   revalidatePath("/");
   return snapshot;
 }
@@ -200,6 +234,20 @@ export async function updateScriptOutlineAction(input: {
   text: string;
 }) {
   const snapshot = await updateScriptOutlineSnapshot(input);
+  revalidatePath("/");
+  return snapshot;
+}
+
+export async function updateScriptCoverAction(input: {
+  projectId: string;
+  scriptId: string;
+  title: string;
+  writtenBy: string;
+  draftDate: string;
+  contact: string;
+  notes: string;
+}) {
+  const snapshot = await updateScriptCoverSnapshot(input);
   revalidatePath("/");
   return snapshot;
 }

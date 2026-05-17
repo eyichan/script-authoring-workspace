@@ -353,3 +353,18 @@ M5 complete. Functional script workspace is implemented and verified.
 - Use the lightweight domain PDF generator for native PDF downloads; reserve richer pagination and layout rendering for a later export-hardening slice.
 - Collaboration covers persisted invite/share state, reviewer removal, and share revocation, not real-time multiplayer editing.
 - Entity workbench detail editing, reference-aligned Beat planning, and page-specific tab surfaces are now tracked as a separate post-M5 slice in `docs/entity-workbench-detail-plan.md`, based on the 2026-05-16 authenticated Laper reference pass.
+- After workflow hardening on 2026-05-17:
+  - Added `ScriptCover` persistence and a Script Cover editor for title, writer, draft date, contact, and notes.
+  - Added metadata-only delete actions and detail-dialog confirmation for Character, Scene, and Location metadata while preserving source screenplay blocks.
+  - Added guarded detail deletion for Beat and Prop records.
+  - Merged saved Character, Scene, Location, Prop, and Asset metadata into overview card/table previews.
+  - Added Script sidebar quick actions for Scene and Character creation.
+  - Fixed sidebar insertion so it commits the active unblurred source block and inserts the new block in a single transaction.
+  - Added E2E coverage for sidebar-created Scene/Character authoring through FDX export, cover persistence, and metadata deletion preserving source lines.
+  - `npx prisma validate`: succeeded after injecting `DATABASE_URL` from `.env.example`.
+  - `npx prisma generate`: succeeded after injecting `DATABASE_URL` from `.env.example`.
+  - `npx prisma migrate deploy`: succeeded and applied `20260517090000_script_cover_workflow_hardening`.
+  - `npm run lint`: succeeded.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run build`: succeeded.
+  - `npm run test:e2e`: succeeded, 11 Playwright tests passed.

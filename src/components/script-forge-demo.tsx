@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 
 import {
   createProjectAction,
@@ -28,13 +28,17 @@ import {
   createPropAction,
   deleteAssetAction,
   deleteBeatAction,
+  deleteCharacterProfileAction,
+  deleteLocationProfileAction,
   deletePropAction,
+  deleteSceneProductionNoteAction,
   importAssetAction,
   updateAssetAction,
   updateBeatDetailAction,
   updateBeatAction,
   updatePropDetailAction,
   updatePropAction,
+  updateScriptCoverAction,
   updateScriptOutlineAction,
   upsertCharacterProfileAction,
   upsertLocationProfileAction,
@@ -85,6 +89,7 @@ import {
 import {
   updateScriptBlockText,
 } from "@/lib/domain/script-blocks";
+import { Button } from "@/components/ui/button";
 import { seedWorkspace } from "@/lib/domain/seed";
 import type {
   AssetTask,
@@ -96,6 +101,7 @@ import type {
   Script,
   ScriptBlock,
   ScriptBlockType,
+  ScriptCover,
   WorkspaceView,
 } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
@@ -222,6 +228,21 @@ function buildSceneHeading(parts: SceneHeadingParts): string {
   });
 }
 
+function getFallbackCover(script: Script): ScriptCover {
+  return {
+    scriptId: script.id,
+    title: script.title.toUpperCase(),
+    writtenBy: "",
+    draftDate: "",
+    contact: "",
+    notes: "",
+  };
+}
+
+function compactStrings(values: Array<string | undefined>) {
+  return values.filter((value): value is string => Boolean(value));
+}
+
 type ScriptForgeDemoProps = {
   initialActiveProjectId?: string;
   initialProjects?: Project[];
@@ -289,6 +310,9 @@ export function ScriptForgeDemo({
   const [scriptOutline, setScriptOutline] = useState(
     initialWorkspace.outline?.text ?? "",
   );
+  const [scriptCover, setScriptCover] = useState<ScriptCover>(
+    initialWorkspace.cover ?? getFallbackCover(initialWorkspace.script),
+  );
   const [collaboration, setCollaboration] = useState<CollaborationState>(
     initialWorkspace.collaboration,
   );
@@ -355,6 +379,7 @@ export function ScriptForgeDemo({
     setSceneProductionNotes(workspace.sceneProductionNotes);
     setLocationProfiles(workspace.locationProfiles);
     setScriptOutline(workspace.outline?.text ?? "");
+    setScriptCover(workspace.cover ?? getFallbackCover(workspace.script));
     setCollaboration(workspace.collaboration);
     setActiveProjectId(workspace.project.id);
     setSceneDrafts({});
@@ -454,30 +479,74 @@ export function ScriptForgeDemo({
   };
 
   const dynamicCards: Record<WorkbenchPageName, WorkbenchCard[]> = {
-    Characters: derived.characters.map((character) => ({
-      id: character.id,
-      title: character.displayName,
-      persisted: false,
-    })),
+    Characters: derived.characters.map((character) => {
+      const profile = characterProfiles.find((item) => item.characterId === character.id);
+
+      return {
+        id: character.id,
+        title: profile?.displayName || character.displayName,
+        persisted: Boolean(profile),
+        subtitle: profile?.role || `${character.sceneIds.length} scenes`,
+        description:
+          profile?.bio ||
+          profile?.appearanceNotes ||
+          `${character.dialogueLineCount} dialogue lines derived from screenplay source.`,
+        meta: compactStrings([
+          profile?.gender || "Not Set",
+          profile?.age ? `Age ${profile.age}` : "",
+          `${character.dialogueLineCount} lines`,
+        ]),
+      };
+    }),
     Props: props.map((prop) => ({
       id: prop.id,
       title: prop.name,
       persisted: true,
+      subtitle: prop.category || "Prop",
+      description: prop.description || prop.imageNote,
+      meta: compactStrings([prop.themeColor, prop.imageNote ? "Image note" : ""]),
     })),
-    Locations: derived.locations.map((location) => ({
-      id: location.id,
-      title: location.displayName,
-      persisted: false,
-    })),
-    Scenes: derived.scenes.map((scene) => ({
-      id: scene.id,
-      title: scene.heading,
-      persisted: false,
-    })),
+    Locations: derived.locations.map((location) => {
+      const profile = locationProfiles.find((item) => item.locationId === location.id);
+
+      return {
+        id: location.id,
+        title: profile?.displayName || location.displayName,
+        persisted: Boolean(profile),
+        subtitle: profile?.scoutingStatus || `${location.sceneIds.length} scenes`,
+        description:
+          profile?.description ||
+          profile?.address ||
+          `${location.characterIds.length} linked characters from scene headings.`,
+        meta: compactStrings([
+          profile?.ownerName,
+          profile?.dailyRental,
+          `${location.sceneIds.length} scenes`,
+        ]),
+      };
+    }),
+    Scenes: derived.scenes.map((scene) => {
+      const note = sceneProductionNotes.find((item) => item.sceneId === scene.id);
+
+      return {
+        id: scene.id,
+        title: scene.heading,
+        persisted: Boolean(note),
+        subtitle: note ? `${note.stillStatus} still / ${note.videoStatus} video` : scene.timeOfDay,
+        description:
+          note?.description ||
+          note?.artRequirements ||
+          `${scene.blockCount} script blocks, ${scene.characterIds.length} characters.`,
+        meta: [`${scene.dialogueLineCount} lines`, `${scene.characterIds.length} chars`],
+      };
+    }),
     Assets: assetTasks.map((task) => ({
       id: task.id,
       title: task.title,
       persisted: true,
+      subtitle: task.status,
+      description: `Generated from the ${task.kind.replaceAll("-", " ")} workflow.`,
+      meta: [new Date(task.createdAt).toLocaleDateString("en-US")],
     })),
   };
   const workbenchCount =
@@ -485,7 +554,7 @@ export function ScriptForgeDemo({
       ? dynamicCards[activePage].length + mockAdditions[activePage]
       : 0;
   const pageActionCount = activePage === "Beats" ? beats.length : workbenchCount;
-  const sidebarSectionTitle = activePage === "Script" ? "Scenes" : activePage;
+  const sidebarSectionTitle = activePage === "Script" ? "Script Entities" : activePage;
   const sidebarItems = useMemo(() => {
     if (activePage === "Beats") {
       return beats.length
@@ -536,6 +605,23 @@ export function ScriptForgeDemo({
         : [{ id: "empty-assets", title: "No assets yet", time: "TASKS", index: 1 }];
     }
 
+    if (activePage === "Script") {
+      return [
+        ...derived.scenes.map((scene, index) => ({
+          id: scene.id,
+          title: `${scene.prefix} ${scene.locationName}`,
+          time: scene.timeOfDay,
+          index: index + 1,
+        })),
+        ...derived.characters.map((character, index) => ({
+          id: character.id,
+          title: character.displayName,
+          time: "CHAR",
+          index: derived.scenes.length + index + 1,
+        })),
+      ];
+    }
+
     return derived.scenes.map((scene, index) => ({
       id: scene.id,
       title: `${scene.prefix} ${scene.locationName}`,
@@ -580,6 +666,52 @@ export function ScriptForgeDemo({
         }),
       { focusReturnedBlock: true },
     );
+  };
+
+  const handleInsertPresetScriptBlock = (
+    tool: "Scene" | "Character",
+    text: string,
+    afterBlockId = activeBlockId,
+  ) => {
+    const type = toolToBlockType[tool];
+    const sourceBlock = blocks.find((block) => block.id === afterBlockId);
+    setActivePage("Script");
+    setEditorTab("script");
+    setActiveTool(tool);
+
+    void runScriptMutation(
+      () => {
+        if (sourceBlock) {
+          return commitAndInsertScriptBlockAction({
+            projectId: activeProject.id,
+            scriptId: script.id,
+            type,
+            afterBlockId: sourceBlock.id,
+            text: sourceBlock.text,
+            insertedText: text,
+          });
+        }
+
+        return insertScriptBlockAction({
+          projectId: activeProject.id,
+          scriptId: script.id,
+          type,
+          text,
+          afterBlockId: afterBlockId || undefined,
+        });
+      },
+      { focusReturnedBlock: true },
+    );
+  };
+
+  const handleSidebarAddScene = () => {
+    const sequence = derived.scenes.length + 1;
+    handleInsertPresetScriptBlock("Scene", `INT. NEW SCENE ${sequence} - DAY`);
+  };
+
+  const handleSidebarAddCharacter = () => {
+    const sequence = derived.characters.length + 1;
+    handleInsertPresetScriptBlock("Character", `NEW CHARACTER ${sequence}`);
   };
 
   const handleUpdateScriptBlock = (id: string, value: string) => {
@@ -782,10 +914,19 @@ export function ScriptForgeDemo({
   };
 
   const focusSourceBlock = (id: string) => {
-    if (!id.startsWith("scene-")) return;
+    if (id.startsWith("scene-")) {
+      setActiveScene(id);
+      focusBlockById(id.slice("scene-".length));
+      return;
+    }
 
-    setActiveScene(id);
-    focusBlockById(id.slice("scene-".length));
+    const character = derived.characters.find((item) => item.id === id);
+    const firstSourceBlockId = character?.sourceBlockIds[0];
+
+    if (firstSourceBlockId) {
+      setActiveScene(id);
+      focusBlockById(firstSourceBlockId);
+    }
   };
 
   const handleCreateBeat = () => {
@@ -1006,6 +1147,53 @@ export function ScriptForgeDemo({
     void runCollaborationMutation(() => revokeShareAction(activeProject.id));
   };
 
+  const handleDeleteCharacterMetadata = (characterId: string) => {
+    setDetailTarget(null);
+    void runWorkbenchMutation(() =>
+      deleteCharacterProfileAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+        characterId,
+      }),
+    );
+  };
+
+  const handleDeleteSceneMetadata = (sceneId: string) => {
+    setDetailTarget(null);
+    void runWorkbenchMutation(() =>
+      deleteSceneProductionNoteAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+        sceneId,
+      }),
+    );
+  };
+
+  const handleDeleteLocationMetadata = (locationId: string) => {
+    setDetailTarget(null);
+    void runWorkbenchMutation(() =>
+      deleteLocationProfileAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+        locationId,
+      }),
+    );
+  };
+
+  const handleUpdateScriptCover = (cover: ScriptCover) => {
+    void runWorkbenchMutation(() =>
+      updateScriptCoverAction({
+        projectId: activeProject.id,
+        scriptId: script.id,
+        title: cover.title,
+        writtenBy: cover.writtenBy,
+        draftDate: cover.draftDate,
+        contact: cover.contact,
+        notes: cover.notes,
+      }),
+    );
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-[#f4f6f5] text-[#242421]">
       <WorkspaceTopBar
@@ -1034,6 +1222,14 @@ export function ScriptForgeDemo({
           activeScene={activeScene}
           projectMutationPending={projectMutationPending}
           projectTitleValue={projectTitleValue}
+          quickActions={
+            activePage === "Script"
+              ? [
+                  { label: "Scene", onClick: handleSidebarAddScene },
+                  { label: "Character", onClick: handleSidebarAddCharacter },
+                ]
+              : []
+          }
           sectionTitle={sidebarSectionTitle}
           sidebarItems={sidebarItems}
           onOpenProjects={() => setWorkspaceMode("projects")}
@@ -1133,8 +1329,11 @@ export function ScriptForgeDemo({
                 assetTasks={assetTasks}
                 cards={dynamicCards[activePage]}
                 characters={derived.characters}
+                characterProfiles={characterProfiles}
+                locationProfiles={locationProfiles}
                 locations={derived.locations}
                 props={props}
+                sceneNotes={sceneProductionNotes}
                 scenes={derived.scenes}
                 mutationPending={workbenchMutationPending}
                 onDeleteCard={(id) =>
@@ -1163,7 +1362,12 @@ export function ScriptForgeDemo({
                 }
               />
             ) : editorTab === "cover" ? (
-              <CoverPreview />
+              <CoverPreview
+                cover={scriptCover}
+                mutationPending={workbenchMutationPending}
+                onChange={setScriptCover}
+                onSave={handleUpdateScriptCover}
+              />
             ) : (
               <ScriptEditorCanvas
                 activeTool={activeTool}
@@ -1298,38 +1502,132 @@ export function ScriptForgeDemo({
             }),
           );
         }}
+        onDeleteBeat={(beatId) => {
+          setDetailTarget(null);
+          handleDeleteBeat(beatId);
+        }}
+        onDeleteCharacter={handleDeleteCharacterMetadata}
+        onDeleteLocation={handleDeleteLocationMetadata}
+        onDeleteProp={(propId) => {
+          setDetailTarget(null);
+          handleDeleteWorkbenchCard("Props", propId);
+        }}
+        onDeleteScene={handleDeleteSceneMetadata}
       />
     </div>
   );
 }
 
-function CoverPreview() {
+function CoverPreview({
+  cover,
+  mutationPending,
+  onChange,
+  onSave,
+}: {
+  cover: ScriptCover;
+  mutationPending: boolean;
+  onChange: (cover: ScriptCover) => void;
+  onSave: (cover: ScriptCover) => void;
+}) {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSave(cover);
+  };
+
+  const updateCover = (patch: Partial<ScriptCover>) => {
+    onChange({ ...cover, ...patch });
+  };
+
   return (
-    <div className="relative min-h-[1180px] px-4 pb-20 pt-16 max-[900px]:px-3">
+    <div className="relative grid min-h-[1180px] grid-cols-[minmax(280px,340px)_minmax(0,1fr)] gap-6 px-6 pb-20 pt-10 max-[1100px]:grid-cols-1 max-[900px]:px-3">
+      <form
+        onSubmit={handleSubmit}
+        className="h-fit rounded-xl border border-[#deded8] bg-white p-4 shadow-[0_8px_24px_rgb(42_42_37/0.07)]"
+      >
+        <h2 className="text-[17px] font-medium">Script Cover</h2>
+        <div className="mt-4 grid gap-3">
+          <CoverField
+            label="Title"
+            value={cover.title}
+            onChange={(value) => updateCover({ title: value.toUpperCase() })}
+          />
+          <CoverField
+            label="Written By"
+            value={cover.writtenBy}
+            onChange={(value) => updateCover({ writtenBy: value })}
+          />
+          <CoverField
+            label="Draft Date"
+            value={cover.draftDate}
+            onChange={(value) => updateCover({ draftDate: value })}
+          />
+          <CoverField
+            label="Contact"
+            value={cover.contact}
+            onChange={(value) => updateCover({ contact: value })}
+          />
+          <label className="grid gap-1.5 text-[12px] font-medium text-[#5f6762]">
+            Notes
+            <textarea
+              value={cover.notes}
+              onChange={(event) => updateCover({ notes: event.target.value })}
+              className="min-h-20 resize-y rounded-lg border border-[#dce2de] bg-white px-3 py-2 text-[14px] font-normal leading-6 text-[#242421] outline-none focus:ring-2 focus:ring-[#dfe8e2]"
+            />
+          </label>
+        </div>
+        <Button
+          type="submit"
+          disabled={mutationPending || !cover.title.trim()}
+          className="mt-4 h-8 rounded-full bg-[#2e6248] px-4 text-[13px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0"
+        >
+          {mutationPending ? "Saving" : "Save Cover"}
+        </Button>
+      </form>
       <article className="script-paper mx-auto min-h-[1000px] w-[min(816px,100%)] overflow-hidden">
         <div className="flex min-h-[1000px] flex-col items-center px-16 pb-20 pt-28 text-center font-mono">
           <div className="mt-16 text-[16px] uppercase tracking-normal">
-            THE DINER AT VIOLET DAWN
+            {cover.title}
           </div>
           <div className="mt-8 text-[13px] leading-6 text-[#6f7672]">
             Written by
             <br />
-            Nora Vale
+            {cover.writtenBy || "Writer"}
           </div>
           <div className="mt-auto grid w-full grid-cols-2 gap-10 text-left text-[12px] leading-5 text-[#6f7672]">
             <div>
               Draft date
               <br />
-              May 14, 2026
+              {cover.draftDate || "Draft date"}
             </div>
             <div className="text-right">
               Contact
               <br />
-              story@sample.studio
+              {cover.contact || "Contact"}
             </div>
           </div>
         </div>
       </article>
     </div>
+  );
+}
+
+function CoverField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid gap-1.5 text-[12px] font-medium text-[#5f6762]">
+      {label}
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 rounded-lg border border-[#dce2de] bg-white px-3 text-[14px] font-normal text-[#242421] outline-none focus:ring-2 focus:ring-[#dfe8e2]"
+      />
+    </label>
   );
 }

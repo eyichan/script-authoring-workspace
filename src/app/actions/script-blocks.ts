@@ -15,6 +15,7 @@ export async function insertScriptBlockAction(input: {
   projectId: string;
   scriptId: string;
   type: ScriptBlockType;
+  text?: string;
   afterBlockId?: string;
 }) {
   const snapshot = await insertScriptBlockSnapshot(input);
@@ -28,6 +29,7 @@ export async function commitAndInsertScriptBlockAction(input: {
   type: ScriptBlockType;
   afterBlockId: string;
   text: string;
+  insertedText?: string;
 }) {
   const snapshot = await commitAndInsertScriptBlockSnapshot(input);
   revalidatePath("/");

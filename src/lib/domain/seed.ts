@@ -102,6 +102,14 @@ export const seedWorkspace: WorkspaceView = {
     scriptId: "script-demo",
     text: "",
   },
+  cover: {
+    scriptId: "script-demo",
+    title: "THE DINER AT VIOLET DAWN",
+    writtenBy: "Nora Vale",
+    draftDate: "May 14, 2026",
+    contact: "story@sample.studio",
+    notes: "",
+  },
   collaboration: {
     collaborators: [
       {
