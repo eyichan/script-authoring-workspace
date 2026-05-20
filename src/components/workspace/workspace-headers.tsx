@@ -114,8 +114,8 @@ export function WorkspaceMainHeader({
           : activePage;
 
   return (
-    <header className="pointer-events-none relative flex items-center justify-center border-b border-[#ebebe7] px-4 max-[900px]:min-h-[96px] max-[900px]:flex-col max-[900px]:gap-2 max-[900px]:py-3">
-      <div className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center gap-2 text-[16px] font-normal max-[900px]:static max-[900px]:translate-y-0">
+    <header className="relative z-20 grid min-h-12 grid-cols-[1fr_auto_1fr] items-center border-b border-[#ebebe7] px-4 max-[900px]:flex max-[900px]:min-h-[96px] max-[900px]:flex-col max-[900px]:gap-2 max-[900px]:py-3">
+      <div className="flex items-center gap-2 justify-self-start text-[16px] font-normal">
         {title}
         {!editorMode && activePage !== "Storyboard" ? (
           <span className="rounded-md bg-[#f3f3f0] px-2 py-1 text-[13px] font-normal">
@@ -158,12 +158,12 @@ export function WorkspaceMainHeader({
         />
       ) : null}
       {editorMode ? (
-        <div className="pointer-events-auto absolute right-4 top-1/2 -translate-y-1/2 max-[900px]:hidden">
+        <div className="justify-self-end max-[900px]:hidden">
           <IconChrome label="Statistics" icon={BarChart3} />
         </div>
       ) : activePage === "Beats" ? (
         <Button
-          className="pointer-events-auto absolute right-4 top-1/2 z-10 h-7 -translate-y-1/2 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0 max-[900px]:static max-[900px]:translate-y-0"
+          className="h-7 justify-self-end rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0"
           disabled={workbenchMutationPending}
           onClick={onCreateBeat}
         >
@@ -172,7 +172,7 @@ export function WorkspaceMainHeader({
         </Button>
       ) : activePage !== "Storyboard" ? (
         <Button
-          className="pointer-events-auto absolute right-4 top-1/2 z-10 h-7 -translate-y-1/2 rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0 max-[900px]:static max-[900px]:translate-y-0"
+          className="h-7 justify-self-end rounded-full bg-[#2e6248] px-3 text-[12px] font-medium text-white shadow-none transition-[background-color,box-shadow,transform,color,border-color] duration-200 hover:bg-[#28583f] active:translate-y-0"
           disabled={workbenchMutationPending}
           onClick={onWorkbenchAction}
         >

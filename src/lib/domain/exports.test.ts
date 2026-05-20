@@ -68,9 +68,20 @@ const blocks: ScriptBlock[] = [
 
 describe("script exports", () => {
   it("formats ordered Fountain text", () => {
-    const fountain = formatFountain("Pilot Draft", blocks);
+    const fountain = formatFountain(
+      {
+        title: "Pilot Draft",
+        writtenBy: "Nora Vale",
+        draftDate: "May 20, 2026",
+        contact: "story@example.com",
+      },
+      blocks,
+    );
 
     assert.match(fountain, /^Title: Pilot Draft/);
+    assert.match(fountain, /Author: Nora Vale/);
+    assert.match(fountain, /Draft date: May 20, 2026/);
+    assert.match(fountain, /Contact: story@example\.com/);
     assert.ok(
       fountain.indexOf("INT. TEST ROOM - DAY") < fountain.indexOf("A door opens."),
     );
@@ -79,25 +90,45 @@ describe("script exports", () => {
   });
 
   it("formats Final Draft XML with escaped text", () => {
-    const xml = formatFinalDraftXml("Pilot & Draft", blocks);
+    const xml = formatFinalDraftXml(
+      {
+        title: "Pilot & Draft",
+        writtenBy: "Ada <Writer>",
+        draftDate: "May 20, 2026",
+        contact: "story@example.com",
+      },
+      blocks,
+    );
 
     assert.match(xml, /<FinalDraft DocumentType="Script"/);
     assert.match(xml, /Pilot &amp; Draft/);
+    assert.match(xml, /Written by\nAda &lt;Writer&gt;/);
+    assert.match(xml, /Draft date\nMay 20, 2026/);
+    assert.match(xml, /Contact\nstory@example\.com/);
     assert.match(xml, /<Paragraph Type="Scene Heading">/);
     assert.match(xml, /<Paragraph Type="Dialogue">/);
     assert.match(xml, /<Paragraph Type="Transition">/);
   });
 
   it("builds export packages with useful filenames and mime types", () => {
-    const fdx = buildScriptExport("fdx", "Pilot Draft", blocks);
-    const fountain = buildScriptExport("fountain", "Pilot Draft", blocks);
-    const pdf = buildScriptExport("pdf", "Pilot Draft", blocks);
+    const cover = {
+      title: "Pilot Draft",
+      writtenBy: "Nora Vale",
+      draftDate: "May 20, 2026",
+      contact: "story@example.com",
+    };
+    const fdx = buildScriptExport("fdx", cover, blocks);
+    const fountain = buildScriptExport("fountain", cover, blocks);
+    const pdf = buildScriptExport("pdf", cover, blocks);
 
     assert.equal(fdx.filename, "pilot-draft.fdx");
     assert.equal(fountain.filename, "pilot-draft.fountain");
     assert.equal(pdf.filename, "pilot-draft.pdf");
     assert.equal(fdx.mimeType, "application/xml;charset=utf-8");
     assert.equal(pdf.mimeType, "application/pdf");
+    assert.match(fdx.content, /Nora Vale/);
+    assert.match(fountain.content, /Author: Nora Vale/);
+    assert.match(pdf.content, /Written by Nora Vale/);
   });
 
   it("formats a native PDF document", () => {

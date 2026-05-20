@@ -268,6 +268,13 @@ type CollaborationMutationPayload = WorkspaceSnapshotPayload & {
   message: string;
 };
 
+type DeleteConfirmationTarget =
+  | { kind: "script-block"; block: ScriptBlock }
+  | { kind: "beat"; id: string; title: string }
+  | { kind: "prop"; id: string; title: string }
+  | { kind: "asset"; id: string; title: string }
+  | { kind: "project"; id: string; title: string };
+
 export function ScriptForgeDemo({
   initialActiveProjectId,
   initialProjects,
@@ -342,6 +349,8 @@ export function ScriptForgeDemo({
   const [beatTab, setBeatTab] = useState("Arrangement");
   const [workbenchTabs, setWorkbenchTabs] = useState(initialWorkbenchTabs);
   const [detailTarget, setDetailTarget] = useState<EntityDetailTarget | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] =
+    useState<DeleteConfirmationTarget | null>(null);
   const [mockAdditions, setMockAdditions] = useState(initialAdditions);
   const [workbenchMessage, setWorkbenchMessage] = useState(
     "Select a page action to create a local mock state.",
@@ -352,6 +361,8 @@ export function ScriptForgeDemo({
   const [workbenchMutationPending, setWorkbenchMutationPending] = useState(false);
   const [collaborationMutationPending, setCollaborationMutationPending] =
     useState(false);
+  const pendingScriptMutationCount = useRef(0);
+  const scriptMutationQueue = useRef<Promise<void>>(Promise.resolve());
   const [collaborationMessage, setCollaborationMessage] = useState(
     "Invite collaborators to create a persisted review link.",
   );
@@ -426,10 +437,12 @@ export function ScriptForgeDemo({
     operation: () => Promise<ScriptMutationPayload>,
     options: { focusReturnedBlock?: boolean } = {},
   ) => {
-    if (scriptMutationPending) return;
-
+    pendingScriptMutationCount.current += 1;
     setScriptMutationPending(true);
-    try {
+
+    const mutationTask = scriptMutationQueue.current
+      .catch(() => undefined)
+      .then(async () => {
       const snapshot = await operation();
       setProjects(snapshot.projects);
       applyWorkspace(snapshot.workspace, {
@@ -440,9 +453,16 @@ export function ScriptForgeDemo({
       if (snapshot.activeBlockId) {
         setActiveBlockId(snapshot.activeBlockId);
       }
-    } finally {
-      setScriptMutationPending(false);
-    }
+      })
+      .finally(() => {
+        pendingScriptMutationCount.current -= 1;
+        if (pendingScriptMutationCount.current === 0) {
+          setScriptMutationPending(false);
+        }
+      });
+
+    scriptMutationQueue.current = mutationTask.catch(() => undefined);
+    return mutationTask;
   };
 
   const runWorkbenchMutation = async (
@@ -878,7 +898,7 @@ export function ScriptForgeDemo({
     );
   };
 
-  const handleDeleteScriptBlock = (block: ScriptBlock) => {
+  const executeDeleteScriptBlock = (block: ScriptBlock) => {
     void runScriptMutation(
       () =>
         deleteScriptBlockAction({
@@ -887,6 +907,10 @@ export function ScriptForgeDemo({
         }),
       { focusReturnedBlock: true },
     );
+  };
+
+  const requestDeleteScriptBlock = (block: ScriptBlock) => {
+    setDeleteConfirmation({ kind: "script-block", block });
   };
 
   const handleScenePartChange = (
@@ -956,7 +980,7 @@ export function ScriptForgeDemo({
     );
   };
 
-  const handleDeleteBeat = (beatId: string) => {
+  const executeDeleteBeat = (beatId: string) => {
     void runWorkbenchMutation(() =>
       deleteBeatAction({
         projectId: activeProject.id,
@@ -966,7 +990,17 @@ export function ScriptForgeDemo({
     );
   };
 
-  const handleDeleteWorkbenchCard = (page: WorkbenchPageName, id: string) => {
+  const requestDeleteBeat = (beatId: string) => {
+    const beat = beats.find((item) => item.id === beatId);
+
+    setDeleteConfirmation({
+      kind: "beat",
+      id: beatId,
+      title: beat?.title ?? "Beat",
+    });
+  };
+
+  const executeDeleteWorkbenchCard = (page: WorkbenchPageName, id: string) => {
     if (page === "Props") {
       void runWorkbenchMutation(() =>
         deletePropAction({
@@ -986,6 +1020,29 @@ export function ScriptForgeDemo({
           assetId: id,
         }),
       );
+    }
+  };
+
+  const requestDeleteWorkbenchCard = (page: WorkbenchPageName, id: string) => {
+    if (page === "Props") {
+      const prop = props.find((item) => item.id === id);
+
+      setDeleteConfirmation({
+        kind: "prop",
+        id,
+        title: prop?.name ?? "Prop",
+      });
+      return;
+    }
+
+    if (page === "Assets") {
+      const asset = assetTasks.find((item) => item.id === id);
+
+      setDeleteConfirmation({
+        kind: "asset",
+        id,
+        title: asset?.title ?? "Asset",
+      });
     }
   };
 
@@ -1037,8 +1094,18 @@ export function ScriptForgeDemo({
     void runProjectMutation(() => openProjectAction(projectId));
   };
 
-  const handleTrashProject = (projectId: string) => {
+  const executeTrashProject = (projectId: string) => {
     void runProjectMutation(() => trashProjectAction(projectId));
+  };
+
+  const requestTrashProject = (projectId: string) => {
+    const project = projects.find((item) => item.id === projectId);
+
+    setDeleteConfirmation({
+      kind: "project",
+      id: projectId,
+      title: project?.title ?? "Project",
+    });
   };
 
   const handleRestoreProject = (projectId: string) => {
@@ -1070,7 +1137,14 @@ export function ScriptForgeDemo({
     if (!isWorkbenchPage(activePage)) return;
 
     if (activePage === "Scenes") {
-      setWorkbenchMessage("Scene board tidied: cards sorted by screenplay order.");
+      handleSidebarAddScene();
+      setWorkbenchMessage("New scene inserted into the screenplay source.");
+      return;
+    }
+
+    if (activePage === "Characters") {
+      handleSidebarAddCharacter();
+      setWorkbenchMessage("New character inserted into the screenplay source.");
       return;
     }
 
@@ -1093,7 +1167,7 @@ export function ScriptForgeDemo({
   };
 
   const handleExportScript = () => {
-    const exportPackage = buildScriptExport(exportFormat, script.title, blocks);
+    const exportPackage = buildScriptExport(exportFormat, scriptCover, blocks);
     const blob = new Blob([exportPackage.content], {
       type: exportPackage.mimeType,
     });
@@ -1145,6 +1219,34 @@ export function ScriptForgeDemo({
 
   const handleRevokeShare = () => {
     void runCollaborationMutation(() => revokeShareAction(activeProject.id));
+  };
+
+  const handleConfirmDelete = () => {
+    const target = deleteConfirmation;
+    setDeleteConfirmation(null);
+    if (!target) return;
+
+    if (target.kind === "script-block") {
+      executeDeleteScriptBlock(target.block);
+      return;
+    }
+
+    if (target.kind === "beat") {
+      executeDeleteBeat(target.id);
+      return;
+    }
+
+    if (target.kind === "prop") {
+      executeDeleteWorkbenchCard("Props", target.id);
+      return;
+    }
+
+    if (target.kind === "asset") {
+      executeDeleteWorkbenchCard("Assets", target.id);
+      return;
+    }
+
+    executeTrashProject(target.id);
   };
 
   const handleDeleteCharacterMetadata = (characterId: string) => {
@@ -1211,7 +1313,7 @@ export function ScriptForgeDemo({
           trashedProjects={trashedProjects}
           onCreateProject={handleCreateProject}
           onOpenProject={handleOpenProject}
-          onTrashProject={handleTrashProject}
+          onTrashProject={requestTrashProject}
           onRestoreProject={handleRestoreProject}
         />
       ) : (
@@ -1298,7 +1400,7 @@ export function ScriptForgeDemo({
                 message={workbenchMessage}
                 mutationPending={workbenchMutationPending}
                 outlineText={scriptOutline}
-                onDeleteBeat={handleDeleteBeat}
+                onDeleteBeat={requestDeleteBeat}
                 onEditBeat={(beatId) => setDetailTarget({ kind: "beat", id: beatId })}
                 onUpdateOutline={(text) => {
                   void runWorkbenchMutation(() =>
@@ -1337,7 +1439,7 @@ export function ScriptForgeDemo({
                 scenes={derived.scenes}
                 mutationPending={workbenchMutationPending}
                 onDeleteCard={(id) =>
-                  handleDeleteWorkbenchCard(activePage as WorkbenchPageName, id)
+                  requestDeleteWorkbenchCard(activePage as WorkbenchPageName, id)
                 }
                 onEditCard={(id) => {
                   if (activePage === "Characters") {
@@ -1384,7 +1486,7 @@ export function ScriptForgeDemo({
                   setActiveTool(tool);
                 }}
                 onBlockKeyDown={handleBlockKeyDown}
-                onDeleteBlock={handleDeleteScriptBlock}
+                onDeleteBlock={requestDeleteScriptBlock}
                 onDuplicateBlock={handleDuplicateScriptBlock}
                 onInsertBlock={handleInsertScriptBlock}
                 onOpenBlock={openBlockDestination}
@@ -1504,18 +1606,113 @@ export function ScriptForgeDemo({
         }}
         onDeleteBeat={(beatId) => {
           setDetailTarget(null);
-          handleDeleteBeat(beatId);
+          executeDeleteBeat(beatId);
         }}
         onDeleteCharacter={handleDeleteCharacterMetadata}
         onDeleteLocation={handleDeleteLocationMetadata}
         onDeleteProp={(propId) => {
           setDetailTarget(null);
-          handleDeleteWorkbenchCard("Props", propId);
+          executeDeleteWorkbenchCard("Props", propId);
         }}
         onDeleteScene={handleDeleteSceneMetadata}
       />
+      <DeleteConfirmationDialog
+        target={deleteConfirmation}
+        mutationPending={
+          deleteConfirmation?.kind === "project"
+            ? projectMutationPending
+            : deleteConfirmation?.kind === "script-block"
+              ? scriptMutationPending
+              : workbenchMutationPending
+        }
+        onCancel={() => setDeleteConfirmation(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
+}
+
+function DeleteConfirmationDialog({
+  mutationPending,
+  target,
+  onCancel,
+  onConfirm,
+}: {
+  mutationPending: boolean;
+  target: DeleteConfirmationTarget | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!target) return null;
+
+  const copy = getDeleteConfirmationCopy(target);
+
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-[#151816]/45 px-4 py-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={copy.title}
+        className="w-[min(440px,100%)] rounded-2xl border border-[#edd2ce] bg-[#fffdfc] p-5 shadow-[0_24px_80px_rgb(0_0_0/0.28)]"
+      >
+        <h2 className="text-[18px] font-medium text-[#3b2623]">{copy.title}</h2>
+        <p className="mt-2 text-[13px] leading-5 text-[#76524d]">{copy.body}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={mutationPending}
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={mutationPending}
+            onClick={onConfirm}
+            className="bg-[#b0473e] text-white hover:bg-[#9d3d35]"
+          >
+            Confirm Delete
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getDeleteConfirmationCopy(target: DeleteConfirmationTarget) {
+  if (target.kind === "script-block") {
+    return {
+      title: `Delete ${target.block.type} block?`,
+      body: `This removes "${target.block.text || "empty block"}" from the screenplay source and recalculates derived scenes, characters, and locations.`,
+    };
+  }
+
+  if (target.kind === "beat") {
+    return {
+      title: `Delete beat "${target.title}"?`,
+      body: "This removes the persisted beat from the current script outline.",
+    };
+  }
+
+  if (target.kind === "prop") {
+    return {
+      title: `Delete prop "${target.title}"?`,
+      body: "This removes the persisted prop record from the current script.",
+    };
+  }
+
+  if (target.kind === "asset") {
+    return {
+      title: `Delete asset "${target.title}"?`,
+      body: "This removes the generated/imported asset task from the current script.",
+    };
+  }
+
+  return {
+    title: `Move "${target.title}" to Trash?`,
+    body: "This moves the project out of Active Projects. It can still be restored from Trash.",
+  };
 }
 
 function CoverPreview({

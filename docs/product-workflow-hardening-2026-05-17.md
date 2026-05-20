@@ -92,7 +92,26 @@ E2E result:
 
 ## Remaining Hardening
 
-- Confirm direct destructive icon buttons in Beat/Prop/Asset list and card surfaces, or route them through the same confirmation component.
-- Decide whether cover fields should also feed export title pages for FDX/PDF. Current exports still use `script.title` as the package title.
 - Add explicit UI copy or affordance for "delete metadata only" on derived entity cards if delete becomes available outside the detail dialog.
 - Add source-rename flows for Character and Scene if users expect metadata display-name edits to rewrite script text.
+
+## Follow-Up Hardening: 2026-05-20
+
+Additional product hardening closed the deferred destructive and cover export gaps:
+
+- Direct destructive actions now route through one confirmation component before deleting script blocks, Beat rows, Prop cards/list rows, Asset cards/table rows, or projects.
+- Detail dialogs keep their entity-specific metadata confirmation copy and still preserve source screenplay blocks for derived Character, Scene, and Location records.
+- Script Cover fields now feed exports:
+  - FDX title pages include title, writer, draft date, and contact.
+  - Fountain exports emit title, author, draft date, and contact metadata.
+  - Native PDF exports include the same cover metadata above the script body.
+- Scenes and Characters workbench page actions now create screenplay source blocks instead of local mock counters.
+- Script mutations run through a client-side serial queue so blur-save, sidebar insert, and workbench insert actions cannot silently drop when a user clicks quickly.
+- The main workspace header now uses a three-column grid layout instead of absolute-positioned action buttons, so page actions remain physically clickable and testable as real user interactions.
+
+Verification added:
+
+- E2E coverage for workbench `New Scene` and `New Character` actions creating script source blocks and persisting edited values.
+- E2E coverage for direct delete confirmation on project, script block, Beat, Prop, and Asset delete surfaces.
+- Unit coverage for cover metadata appearing in FDX, Fountain, and PDF export packages.
+- Full verification after this follow-up passed with `npm run lint`, `npm test`, `npm run build`, and `npm run test:e2e`; the E2E suite contains 12 passing Playwright tests.

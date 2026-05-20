@@ -36,14 +36,16 @@ Implemented:
 - Server actions exist for persisting editable Script Cover fields.
 - Detail editor dialogs are wired for Beat, Character, Scene, Location, and Prop metadata.
 - Detail editor deletion requires an explicit confirmation step and names whether metadata or a manual record is being removed.
+- Direct project, script block, Beat, Prop, and Asset delete actions now share a confirmation component before the destructive server action runs.
 - Overview cards, casting rows, scout rows, and scene cards merge persisted metadata previews into script-derived entities.
 - Script sidebar quick actions can add a Scene or Character directly into the script source.
+- Scenes and Characters workbench page actions can also create screenplay source blocks and return the writer to the Script canvas.
+- Script Cover fields are included in FDX, Fountain, and native PDF export output.
 - E2E coverage verifies those detail fields persist to Postgres, metadata deletion keeps source blocks, editable cover fields persist, and sidebar-created scene/character blocks export into a final script.
 
 Missing:
 
 - Collaboration remains reachable, but the current work does not add new collaboration tab behavior.
-- Direct Beat/Prop/Asset list delete buttons still execute immediately outside the detail dialog; full guarded delete for every destructive icon remains future hardening.
 
 ## Product Rules
 
@@ -397,7 +399,7 @@ Verification:
 - E2E: deleting character profile leaves source script character block intact.
 - E2E: deleting prop removes the manual prop record.
 
-Status: detail-dialog delete confirmation is complete for Beat, Character, Scene, Location, and Prop. Derived entity delete actions remove only metadata. Direct row/card delete icons remain a follow-up if the product requires every destructive affordance to be confirmed.
+Status: complete. Detail-dialog delete confirmation is complete for Beat, Character, Scene, Location, and Prop. Derived entity delete actions remove only metadata. Direct delete buttons for script blocks, Beats, Props, Assets, and projects now route through a shared confirmation dialog.
 
 ### Slice 7: Cover And Sidebar Workflow Hardening
 
@@ -410,6 +412,20 @@ Status: detail-dialog delete confirmation is complete for Beat, Character, Scene
 Verification:
 
 - E2E: create a final script from sidebar-created Scene and Character blocks, persist cover fields, download FDX, and verify scene, character, and dialogue content.
+
+Status: complete.
+
+### Slice 8: Workbench Source Creation And Export Metadata
+
+- Route Scenes `New Scene` and Characters `New Character` page actions into the canonical script source instead of mock local additions.
+- Keep the workbench action physically clickable by using stable header layout hierarchy.
+- Queue script mutations so blur persistence cannot drop a following insert action.
+- Include Script Cover metadata in FDX, Fountain, and native PDF exports.
+
+Verification:
+
+- E2E: create a Scene and Character from workbench page actions, edit both in the Script canvas, and verify the persisted `ScriptBlock` rows.
+- Unit: build all export formats from cover metadata and verify title-page / metadata output.
 
 Status: complete.
 

@@ -85,6 +85,10 @@ async function clickButtonByText(page: Page, label: string) {
   }, label);
 }
 
+async function confirmDelete(page: Page) {
+  await page.getByRole("dialog").getByRole("button", { name: "Confirm Delete" }).click();
+}
+
 test("persists project create, trash, and restore", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Home").click();
@@ -111,6 +115,7 @@ test("persists project create, trash, and restore", async ({ page }) => {
   await page.getByLabel("Home").click();
   const createdCard = page.getByTestId(`project-card-${created.id}`);
   await createdCard.getByRole("button", { name: "Delete" }).click({ force: true });
+  await confirmDelete(page);
 
   await expect.poll(async () => (await projectStatus(created.id)).status).toBe("trashed");
   const trashed = await projectStatus(created.id);
@@ -406,6 +411,7 @@ test("builds a final script from sidebar scene and character creation", async ({
     .poll(async () => (await latestActiveProject()).scripts[0]?.blocks.length)
     .toBe(2);
   await characterInput.fill("Riley Pilot");
+  await expect(characterInput).toHaveValue("RILEY PILOT");
   await characterInput.press("Enter");
   await expect
     .poll(async () => (await latestActiveProject()).scripts[0]?.blocks.length)
@@ -446,9 +452,48 @@ test("builds a final script from sidebar scene and character creation", async ({
   expect(path).toBeTruthy();
 
   const content = await readFile(path!, "utf8");
+  expect(content).toContain("WORKFLOW FINAL SCRIPT");
+  expect(content).toContain("Written by\nE2E Writer");
   expect(content).toContain("INT. WORKFLOW DINER - DAY");
   expect(content).toContain("RILEY PILOT");
   expect(content).toContain("We can finish the draft from here.");
+});
+
+test("creates script source entities from workbench page actions", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Home").click();
+  await page.getByRole("button", { name: "New Project" }).click({ force: true });
+  await expect(page.getByLabel("Project title")).toHaveValue(/Untitled Script/);
+
+  await page.getByLabel("Scenes").click();
+  await page.locator("main").getByRole("button", { name: "New Scene" }).click();
+  await expect(page.locator("main").getByRole("tab", { name: "Script" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  const sceneInput = page.getByRole("textbox", { name: /scene location block 1/i });
+  await expect(sceneInput).toBeFocused();
+  await sceneInput.fill("workbench stage");
+
+  await page.getByLabel("Characters").click();
+  await page.locator("main").getByRole("button", { name: "New Character" }).click();
+  const characterInput = page.locator('input[aria-label="character block 2"]');
+  await expect(characterInput).toBeFocused();
+  await characterInput.fill("Workbench Lead");
+  await expect(characterInput).toHaveValue("WORKBENCH LEAD");
+  await characterInput.blur();
+
+  await expect
+    .poll(async () =>
+      (await latestActiveProject()).scripts[0]?.blocks.map((block) => ({
+        text: block.text,
+        type: block.type,
+      })),
+    )
+    .toEqual([
+      { text: "INT. WORKBENCH STAGE - DAY", type: "scene" },
+      { text: "WORKBENCH LEAD", type: "character" },
+    ]);
 });
 
 test("confirms metadata deletion while preserving source script lines", async ({ page }) => {
@@ -545,6 +590,7 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   });
   await expect(page.getByRole("menuitem", { name: "Delete" })).toBeVisible();
   await page.getByRole("menuitem", { name: "Delete" }).click();
+  await confirmDelete(page);
 
   await expect
     .poll(async () => (await latestActiveProject()).scripts[0]?.blocks.length)
@@ -590,6 +636,7 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   await page.getByRole("button", { name: "Delete Revised Beat" }).click({
     force: true,
   });
+  await confirmDelete(page);
   await expect
     .poll(async () => (await latestActiveProject()).scripts[0]?.beats.length)
     .toBe(0);
@@ -603,6 +650,7 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   await page.getByRole("button", { name: "Delete Hero Key" }).click({
     force: true,
   });
+  await confirmDelete(page);
   await expect
     .poll(async () => (await latestActiveProject()).scripts[0]?.props.length)
     .toBe(0);
@@ -617,6 +665,7 @@ test("persists script blocks and workbench records across refresh", async ({ pag
   await page.getByRole("button", { name: "Delete Revised Still" }).click({
     force: true,
   });
+  await confirmDelete(page);
   await expect
     .poll(async () => (await latestActiveProject()).scripts[0]?.assetTasks.length)
     .toBe(0);

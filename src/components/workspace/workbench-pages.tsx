@@ -107,7 +107,7 @@ export const workbenchConfig = {
       { label: "Cards", icon: Film },
       { label: "Scene List", icon: Table2 },
     ],
-    action: "Tidy",
+    action: "New Scene",
     emptyTitle: "Scene Board",
     emptyCopy:
       "Scenes become production units for still generation, shot planning, and video prompts.",

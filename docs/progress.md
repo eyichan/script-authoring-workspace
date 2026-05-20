@@ -2,7 +2,7 @@
 
 ## Current Step
 
-M5 complete. Functional script workspace is implemented and verified.
+M5 complete. Current productization hardening pass for guarded destructive flows, cover-aware exports, and workflow-first Script/Workbench creation paths is implemented and verified.
 
 ## Completed
 
@@ -56,6 +56,12 @@ M5 complete. Functional script workspace is implemented and verified.
 - Added E2E coverage for Character -> Dialogue -> Character screenplay authoring.
 - Extracted the Collaboration inspector panel into `src/components/workspace/collaboration-panel.tsx`.
 - Added persisted collaborator role and status editing.
+- Added shared delete confirmation for direct project, script block, Beat, Prop, and Asset delete actions.
+- Added Script Cover metadata to FDX, Fountain, and native PDF export output.
+- Routed Scenes and Characters workbench page actions into canonical screenplay source creation.
+- Serialized script mutations on the client so blur-save and follow-up insert operations run in order.
+- Reworked the main workspace header into a stable three-column grid so page action buttons are physically clickable without absolute overlay interception.
+- Added E2E coverage for workbench-created source Scene/Character blocks and direct delete confirmation flows.
 - Extracted the Recents/Trash project library into `src/components/workspace/project-library.tsx`.
 - Extracted the script editor canvas and floating insert toolbar into `src/components/workspace/script-editor-canvas.tsx`.
 - Extracted the Writing inspector shell into `src/components/workspace/inspector-panel.tsx`.
@@ -81,7 +87,8 @@ M5 complete. Functional script workspace is implemented and verified.
 
 ## In Progress
 
-- Laper reference-aligned workspace detail expansion is implemented through persisted detail editing. Guarded destructive metadata deletion remains a future hardening slice.
+- Laper reference-aligned workspace detail expansion is implemented through persisted detail editing and guarded delete flows.
+- Current hardening pass is implemented and verified; commit/push handoff is pending.
 
 ## Next
 
@@ -337,6 +344,17 @@ M5 complete. Functional script workspace is implemented and verified.
   - `npm run build`: succeeded and listed `/share/[token]` as a dynamic server-rendered route.
   - `npm run test:e2e`: succeeded; 6 Playwright tests passed, including updating `Reviewer 2` to `Producer`, changing status to `Reviewing`, verifying the share page, then removing the collaborator and revoking the share.
   - The invite assertion now checks the accessible role input value instead of `getByText(/Reviewer 2/)`, because hidden labels also contain that text after adding editable controls.
+- After product hardening on 2026-05-20:
+  - Direct destructive project, source block, Beat, Prop, and Asset actions now require a shared confirmation dialog.
+  - Script Cover metadata feeds FDX, Fountain, and native PDF export output.
+  - Scenes `New Scene` and Characters `New Character` page actions insert canonical source blocks and return focus to the Script canvas.
+  - Script mutations are queued so blur persistence cannot drop a following insert.
+  - Main workspace header actions use grid placement instead of absolute overlay positioning.
+  - `npm run build` with `DATABASE_URL=postgresql://script_author:script_author_password@127.0.0.1:54329/script_authoring?schema=public`: succeeded.
+  - `npx playwright test tests/e2e/workspace-persistence.spec.ts -g "builds a final script|creates script source"` with the same `DATABASE_URL`: succeeded, 2 tests passed.
+  - `npm run lint`: succeeded.
+  - `npm test`: succeeded, 10 tests passed.
+  - `npm run test:e2e` with the same `DATABASE_URL`: succeeded, 12 Playwright tests passed.
 
 ## Decisions
 

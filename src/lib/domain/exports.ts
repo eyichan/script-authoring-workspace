@@ -1,6 +1,11 @@
-import type { ScriptBlock } from "./types";
+import type { ScriptBlock, ScriptCover } from "./types";
 
 export type ScriptExportFormat = "fdx" | "fountain" | "pdf";
+
+export type ScriptExportCover = Pick<
+  ScriptCover,
+  "title" | "writtenBy" | "draftDate" | "contact"
+>;
 
 export type ScriptExportPackage = {
   filename: string;
@@ -56,6 +61,23 @@ function orderedBlocks(blocks: ScriptBlock[]): ScriptBlock[] {
   return [...blocks].sort((a, b) => a.position - b.position);
 }
 
+function normalizeCover(titleOrCover: string | ScriptExportCover): ScriptExportCover {
+  if (typeof titleOrCover === "string") {
+    return {
+      title: titleOrCover,
+      writtenBy: "",
+      draftDate: "",
+      contact: "",
+    };
+  }
+
+  return titleOrCover;
+}
+
+function getCoverTitle(cover: ScriptExportCover): string {
+  return cover.title.trim() || "Untitled Script";
+}
+
 function getFdxParagraphType(block: ScriptBlock): string {
   switch (block.type) {
     case "scene":
@@ -100,16 +122,39 @@ function formatFountainBlock(block: ScriptBlock): string {
   }
 }
 
-export function formatFountain(title: string, blocks: ScriptBlock[]): string {
+export function formatFountain(
+  titleOrCover: string | ScriptExportCover,
+  blocks: ScriptBlock[],
+): string {
+  const cover = normalizeCover(titleOrCover);
+  const metadata = [
+    `Title: ${getCoverTitle(cover)}`,
+    cover.writtenBy ? `Author: ${cover.writtenBy.trim()}` : "",
+    cover.draftDate ? `Draft date: ${cover.draftDate.trim()}` : "",
+    cover.contact ? `Contact: ${cover.contact.trim()}` : "",
+  ].filter(Boolean);
   const body = orderedBlocks(blocks)
     .map(formatFountainBlock)
     .filter(Boolean)
     .join("\n\n");
 
-  return `Title: ${title.trim() || "Untitled Script"}\n\n${body}\n`;
+  return `${metadata.join("\n")}\n\n${body}\n`;
 }
 
-export function formatFinalDraftXml(title: string, blocks: ScriptBlock[]): string {
+export function formatFinalDraftXml(
+  titleOrCover: string | ScriptExportCover,
+  blocks: ScriptBlock[],
+): string {
+  const cover = normalizeCover(titleOrCover);
+  const titlePageContent = [
+    getCoverTitle(cover),
+    cover.writtenBy ? `Written by\n${cover.writtenBy.trim()}` : "",
+    cover.draftDate ? `Draft date\n${cover.draftDate.trim()}` : "",
+    cover.contact ? `Contact\n${cover.contact.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .map((line) => `    <Content>${escapeXml(line)}</Content>`)
+    .join("\n");
   const paragraphs = orderedBlocks(blocks)
     .map((block) => {
       const paragraphType = getFdxParagraphType(block);
@@ -123,7 +168,7 @@ export function formatFinalDraftXml(title: string, blocks: ScriptBlock[]): strin
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<FinalDraft DocumentType="Script" Template="No" Version="1">',
     "  <TitlePage>",
-    `    <Content>${escapeXml(title.trim() || "Untitled Script")}</Content>`,
+    titlePageContent,
     "  </TitlePage>",
     "  <Content>",
     paragraphs,
@@ -133,8 +178,12 @@ export function formatFinalDraftXml(title: string, blocks: ScriptBlock[]): strin
   ].join("\n");
 }
 
-export function formatPrintableHtml(title: string, blocks: ScriptBlock[]): string {
-  const safeTitle = escapeHtml(title.trim() || "Untitled Script");
+export function formatPrintableHtml(
+  titleOrCover: string | ScriptExportCover,
+  blocks: ScriptBlock[],
+): string {
+  const cover = normalizeCover(titleOrCover);
+  const safeTitle = escapeHtml(getCoverTitle(cover));
   const paragraphs = orderedBlocks(blocks)
     .map((block) => {
       const className = `block-${block.type}`;
@@ -239,13 +288,20 @@ function formatPdfBlock(block: ScriptBlock): string[] {
   }
 }
 
-export function formatNativePdf(title: string, blocks: ScriptBlock[]): string {
-  const documentTitle = title.trim() || "Untitled Script";
+export function formatNativePdf(
+  titleOrCover: string | ScriptExportCover,
+  blocks: ScriptBlock[],
+): string {
+  const cover = normalizeCover(titleOrCover);
+  const documentTitle = getCoverTitle(cover);
   const lines = [
     documentTitle.toUpperCase(),
+    cover.writtenBy ? `Written by ${cover.writtenBy.trim()}` : "",
+    cover.draftDate ? `Draft date ${cover.draftDate.trim()}` : "",
+    cover.contact ? `Contact ${cover.contact.trim()}` : "",
     "",
     ...orderedBlocks(blocks).flatMap((block) => [...formatPdfBlock(block), ""]),
-  ].slice(0, 44);
+  ].filter((line, index) => index === 0 || line).slice(0, 44);
   const stream = [
     "BT",
     "/F1 12 Tf",
@@ -283,16 +339,18 @@ export function formatNativePdf(title: string, blocks: ScriptBlock[]): string {
 
 export function buildScriptExport(
   format: ScriptExportFormat,
-  title: string,
+  titleOrCover: string | ScriptExportCover,
   blocks: ScriptBlock[],
 ): ScriptExportPackage {
+  const cover = normalizeCover(titleOrCover);
+  const title = getCoverTitle(cover);
   const baseName = slugifyTitle(title);
 
   if (format === "fdx") {
     return {
       filename: `${baseName}.fdx`,
       mimeType: "application/xml;charset=utf-8",
-      content: formatFinalDraftXml(title, blocks),
+      content: formatFinalDraftXml(cover, blocks),
     };
   }
 
@@ -300,13 +358,13 @@ export function buildScriptExport(
     return {
       filename: `${baseName}.pdf`,
       mimeType: "application/pdf",
-      content: formatNativePdf(title, blocks),
+      content: formatNativePdf(cover, blocks),
     };
   }
 
   return {
     filename: `${baseName}.${extensions[format]}`,
     mimeType: "text/plain;charset=utf-8",
-    content: formatFountain(title, blocks),
+    content: formatFountain(cover, blocks),
   };
 }
